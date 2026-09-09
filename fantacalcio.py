@@ -329,7 +329,7 @@ if menu == "📊 Dashboard & Rose":
                 st.metric("Crediti Residui", crediti_res)
                 
                 tot_giocatori = sum(len(squadra_data[r]) for r in ["P", "D", "C", "A"])
-                st.text(={`Rosa: ${tot_giocatori} giocatori totali`})
+                st.text(f"Rosa: {tot_giocatori} giocatori totali")
                 
                 with st.expander(f"Dettaglio Rosa ({sq})"):
                     for r in ["P", "D", "C", "A"]:
@@ -404,4 +404,5 @@ elif menu == "⚙️ Gestione & Configurazione":
             st.success("Modifica annullata con successo!")
             st.rerun()
         else:
-                    st.warning("Nessuna azione precedente da annullare.")
+            st.warning("Nessuna azione precedente da annullare.")
+```[cite: 2]
