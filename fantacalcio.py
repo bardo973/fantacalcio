@@ -104,7 +104,7 @@ if ruolo_selezionato != "Tutti":
     df_filtered = df_filtered[df_filtered["Ruolo"] == ruolo_selezionato]
 if search_query:
     df_filtered = df_filtered[
-        df_filtered["Nome"].str.contains(search_query, case=False, na=False]
+        df_filtered["Nome"].str.contains(search_query, case=False, na=False)
     ]
 
 st.markdown(f"### Risultati ({len(df_filtered)})")
