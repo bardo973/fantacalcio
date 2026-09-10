@@ -4780,3 +4780,4 @@ def render_posizioni_reali_card(giocatore):
         </div>
     </div>
     """, unsafe_allow_html=True)
+    render_posizioni_reali_card(giocatore)
