@@ -1607,6 +1607,7 @@ menu = st.radio(
         "🎯 Simulatore Rosa",
         "📈 Statistiche Storiche",
         "⚙️ Importa & Esporta"
+        "📊 Statistiche Avanzate"
     ],
     horizontal=True,
     label_visibility="collapsed",
