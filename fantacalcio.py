@@ -4790,7 +4790,9 @@ def calcola_statistiche_avanzate(df_giocatori, stats_per_stagione):
     df["Expected_Bonus_xB"] = expected_bonus
     df["Rating_Avanzato"] = ratings
     return df
- def render_sezione_statistiche_avanzate():
+
+
+def render_sezione_statistiche_avanzate():
     st.header("📊 Statistiche Avanzate & Analytics")
     st.markdown("Analisi approfondita basata su metriche avanzate, indice di efficienza e Expected Bonus (xB).")
     
@@ -4840,4 +4842,4 @@ def calcola_statistiche_avanzate(df_giocatori, stats_per_stagione):
         height=450
     )
     
-    st.info("💡 **Legenda Metriche:**\n- **Rating Avanzato:** Punteggio sintetico complessivo (0-100) calcolato su rendimento e valore di mercato.\n- **Expected Bonus (xB):** Stima statistica dei bonus attesi per partita.\n- **Indice di Efficienza:** Rapporto di conversione tra bonus e presenze/rendimento.")               
+    st.info("💡 **Legenda Metriche:**\n- **Rating Avanzato:** Punteggio sintetico complessivo (0-100) calcolato su rendimento e valore di mercato.\n- **Expected Bonus (xB):** Stima statistica dei bonus attesi per partita.\n- **Indice di Efficienza:** Rapporto di conversione tra bonus e presenze/rendimento.")
