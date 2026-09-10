@@ -1,4 +1,492 @@
-"quotazioni_2025_26": st.session_state.quotazioni_2025_26.to_dict(orient="records") if not st.session_state.quotazioni_2025_26.empty else [],
+import streamlit as st
+import pandas as pd
+import numpy as np
+import json
+from datetime import datetime
+
+# ============================================================
+# CONFIGURAZIONE PAGINA & CSS
+# ============================================================
+st.set_page_config(
+    page_title="FantaManager Pro 2026/27",
+    page_icon="⚽",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.markdown("""
+<style>
+    .main { background-color: #0e1117; color: #fafafa; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #1a1c23;
+        border-radius: 6px 6px 0px 0px;
+        color: #ffffff;
+        padding: 10px 16px;
+        font-weight: 600;
+    }
+    .stTabs [aria-selected="true"] { background-color: #00d26a !important; color: #000000 !important; }
+    .flip-card {
+        background-color: transparent;
+        width: 100%;
+        height: 220px;
+        perspective: 1000px;
+        margin-bottom: 15px;
+    }
+    .flip-card-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        border-radius: 12px;
+    }
+    .flip-card:hover .flip-card-inner {
+        transform: rotateY(180deg);
+    }
+    .flip-card-front, .flip-card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 12px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .flip-card-front {
+        background: linear-gradient(135deg, #1e2229 0%, #111418 100%);
+        color: white;
+        border: 1px solid #2a2f3a;
+    }
+    .flip-card-back {
+        background: linear-gradient(135deg, #00d26a 0%, #009643 100%);
+        color: #000000;
+        transform: rotateY(180deg);
+        font-weight: 600;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ============================================================
+# COSTANTI & LISTONE DEFAULT
+# ============================================================
+CREDITI_INIZIALI = 500
+ROSA_REQ = {
+    "P": {"req": 3, "min_cons": 2, "max_cons": 4},
+    "D": {"req": 8, "min_cons": 6, "max_cons": 10},
+    "C": {"req": 9, "min_cons": 7, "max_cons": 11},
+    "A": {"req": 8, "min_cons": 6, "max_cons": 10},
+}
+
+LISTONE_DEFAULT = [
+    {"Nome": "Di Gregorio", "Ruolo": "P", "Squadra_SerieA": "Juventus", "Quotazione": 15, "FantaMedia": 5.2, "Consiglio": "top"},
+    {"Nome": "Maignan", "Ruolo": "P", "Squadra_SerieA": "Milan", "Quotazione": 18, "FantaMedia": 5.4, "Consiglio": "top"},
+    {"Nome": "Sommer", "Ruolo": "P", "Squadra_SerieA": "Inter", "Quotazione": 17, "FantaMedia": 5.3, "Consiglio": "top"},
+    {"Nome": "Svilar", "Ruolo": "P", "Squadra_SerieA": "Roma", "Quotazione": 12, "FantaMedia": 5.0, "Consiglio": "consigliato"},
+    {"Nome": "Carnesecchi", "Ruolo": "P", "Squadra_SerieA": "Atalanta", "Quotazione": 13, "FantaMedia": 5.1, "Consiglio": "consigliato"},
+    {"Nome": "Bastoni", "Ruolo": "D", "Squadra_SerieA": "Inter", "Quotazione": 16, "FantaMedia": 6.4, "Consiglio": "top"},
+    {"Nome": "Dimarco", "Ruolo": "D", "Squadra_SerieA": "Inter", "Quotazione": 22, "FantaMedia": 6.8, "Consiglio": "top"},
+    {"Nome": "Theo Hernandez", "Ruolo": "D", "Squadra_SerieA": "Milan", "Quotazione": 24, "FantaMedia": 6.9, "Consiglio": "top"},
+    {"Nome": "Bremer", "Ruolo": "D", "Squadra_SerieA": "Juventus", "Quotazione": 15, "FantaMedia": 6.3, "Consiglio": "top"},
+    {"Nome": "Buongiorno", "Ruolo": "D", "Squadra_SerieA": "Napoli", "Quotazione": 14, "FantaMedia": 6.3, "Consiglio": "consigliato"},
+    {"Nome": "Cambiaso", "Ruolo": "D", "Squadra_SerieA": "Juventus", "Quotazione": 12, "FantaMedia": 6.2, "Consiglio": "consigliato"},
+    {"Nome": "Barella", "Ruolo": "C", "Squadra_SerieA": "Inter", "Quotazione": 20, "FantaMedia": 6.7, "Consiglio": "top"},
+    {"Nome": "Calhanoglu", "Ruolo": "C", "Squadra_SerieA": "Inter", "Quotazione": 30, "FantaMedia": 7.5, "Consiglio": "top"},
+    {"Nome": "Pulisic", "Ruolo": "C", "Squadra_SerieA": "Milan", "Quotazione": 28, "FantaMedia": 7.4, "Consiglio": "top"},
+    {"Nome": "Koopmeiners", "Ruolo": "C", "Squadra_SerieA": "Juventus", "Quotazione": 29, "FantaMedia": 7.3, "Consiglio": "top"},
+    {"Nome": "McTominay", "Ruolo": "C", "Squadra_SerieA": "Napoli", "Quotazione": 18, "FantaMedia": 6.8, "Consiglio": "consigliato"},
+    {"Nome": "Zaccagni", "Ruolo": "C", "Squadra_SerieA": "Lazio", "Quotazione": 19, "FantaMedia": 6.9, "Consiglio": "consigliato"},
+    {"Nome": "Retegui", "Ruolo": "A", "Squadra_SerieA": "Atalanta", "Quotazione": 35, "FantaMedia": 8.2, "Consiglio": "top"},
+    {"Nome": "Thuram", "Ruolo": "A", "Squadra_SerieA": "Inter", "Quotazione": 38, "FantaMedia": 8.4, "Consiglio": "top"},
+    {"Nome": "Lautaro Martinez", "Ruolo": "A", "Squadra_SerieA": "Inter", "Quotazione": 55, "FantaMedia": 9.2, "Consiglio": "top"},
+    {"Nome": "Vlahovic", "Ruolo": "A", "Squadra_SerieA": "Juventus", "Quotazione": 42, "FantaMedia": 8.5, "Consiglio": "top"},
+    {"Nome": "Lookman", "Ruolo": "A", "Squadra_SerieA": "Atalanta", "Quotazione": 40, "FantaMedia": 8.7, "Consiglio": "top"},
+    {"Nome": "Kvaratskhelia", "Ruolo": "A", "Squadra_SerieA": "Napoli", "Quotazione": 38, "FantaMedia": 8.3, "Consiglio": "top"},
+]
+
+# ============================================================
+# INIZIALIZZAZIONE SESSION STATE & UNDO/REDO
+# ============================================================
+if "squadre" not in st.session_state:
+    st.session_state.squadre = {f"Squadra {i}": {"crediti": CREDITI_INIZIALI, "rosa": []} for i in range(1, 11)}
+if "nomi_squadre" not in st.session_state:
+    st.session_state.nomi_squadre = list(st.session_state.squadre.keys())
+if "giocatori_db" not in st.session_state:
+    st.session_state.giocatori_db = pd.DataFrame(LISTONE_DEFAULT)
+    if "Prezzo_Consigliato" not in st.session_state.giocatori_db.columns:
+        st.session_state.giocatori_db["Prezzo_Consigliato"] = None
+if "storico_mercato" not in st.session_state:
+    st.session_state.storico_mercato = []
+if "watchlist" not in st.session_state:
+    st.session_state.watchlist = []
+if "prestiti" not in st.session_state:
+    st.session_state.prestiti = []
+if "contratti" not in st.session_state:
+    st.session_state.contratti = {}
+if "stats_storiche" not in st.session_state:
+    st.session_state.stats_storiche = pd.DataFrame()
+if "stats_per_stagione" not in st.session_state:
+    st.session_state.stats_per_stagione = {}
+if "quotazioni_2025_26" not in st.session_state:
+    st.session_state.quotazioni_2025_26 = pd.DataFrame()
+if "crediti_iniziali" not in st.session_state:
+    st.session_state.crediti_iniziali = CREDITI_INIZIALI
+if "wizard_completato" not in st.session_state:
+    st.session_state.wizard_completato = False
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+class StateManager:
+    @staticmethod
+    def snapshot():
+        import copy
+        snapshot_data = {
+            "squadre": copy.deepcopy(st.session_state.squadre),
+            "nomi_squadre": copy.deepcopy(st.session_state.nomi_squadre),
+            "giocatori_db": st.session_state.giocatori_db.copy() if not st.session_state.giocatori_db.empty else pd.DataFrame(),
+            "storico_mercato": copy.deepcopy(st.session_state.storico_mercato),
+            "watchlist": copy.deepcopy(st.session_state.watchlist),
+            "prestiti": copy.deepcopy(st.session_state.prestiti),
+            "contratti": copy.deepcopy(st.session_state.contratti),
+            "crediti_iniziali": st.session_state.crediti_iniziali
+        }
+        st.session_state.history.append(snapshot_data)
+        if len(st.session_state.history) > 20:
+            st.session_state.history.pop(0)
+
+    @staticmethod
+    def undo():
+        if st.session_state.history:
+            prev = st.session_state.history.pop()
+            st.session_state.squadre = prev["squadre"]
+            st.session_state.nomi_squadre = prev["nomi_squadre"]
+            st.session_state.giocatori_db = prev["giocatori_db"]
+            st.session_state.storico_mercato = prev["storico_mercato"]
+            st.session_state.watchlist = prev["watchlist"]
+            st.session_state.prestiti = prev["prestiti"]
+            st.session_state.contratti = prev["contratti"]
+            st.session_state.crediti_iniziali = prev["crediti_iniziali"]
+            invalidate_cache()
+            return True
+        return False
+
+# ============================================================
+# CACHING & UTILITY FUNCTIONS
+# ============================================================
+@st.cache_data(ttl=3600)
+def cached_player_index(db_serialized):
+    # db_serialized passata come tuple/dict per cache
+    mapping = {}
+    for sq_nome, dati in db_serialized["squadre"].items():
+        for g in dati["rosa"]:
+            mapping[g["Nome"].lower()] = sq_nome
+    return mapping
+
+def invalidate_cache():
+    cached_player_index.clear()
+
+def get_player_index():
+    db_dict = {
+        "squadre": st.session_state.squadre
+    }
+    return cached_player_index(db_dict)
+
+def get_nomi_squadre():
+    return st.session_state.nomi_squadre
+
+def get_svincolati(db_df):
+    idx_map = get_player_index()
+    if db_df.empty:
+        return db_df
+    mask = db_df["Nome"].apply(lambda x: x.lower() not in idx_map)
+    return db_df[mask]
+
+def rosa_proprieta(nome_sq):
+    return st.session_state.squadre[nome_sq]["rosa"]
+
+@st.cache_data
+def calcola_prezzo_consigliato_cached(fanta_media, quotazione, consiglio):
+    base = quotazione * 1.2
+    bonus_fm = max(0, (fanta_media - 6.0) * 4)
+    moltiplicatore = 1.3 if consiglio == "top" else (1.1 if consiglio == "consigliato" else 0.9)
+    prezzo = int(round((base + bonus_fm) * moltiplicatore))
+    return max(1, prezzo)
+
+def calcola_prezzo_consigliato(giocatore_dict, stats_storiche_df=None):
+    fm = float(giocatore_dict.get("FantaMedia", 6.0))
+    q = float(giocatore_dict.get("Quotazione", 10.0))
+    cons = str(giocatore_dict.get("Consiglio", "scommessa"))
+    
+    # Se abbiamo storico stagioni passate, raffiniamo
+    spiegazione = f"Base listone: {q}cr | FantaMedia: {fm} | Fascia: {cons}"
+    prezzo = calcola_prezzo_consigliato_cached(fm, q, cons)
+    return prezzo, spiegazione
+
+def riepilogo_rosa(nome_sq):
+    rosa = rosa_proprieta(nome_sq)
+    crediti = st.session_state.squadre[nome_sq]["crediti"]
+    
+    conteggi = {"P": 0, "D": 0, "C": 0, "A": 0}
+    spesa_ruolo = {"P": 0, "D": 0, "C": 0, "A": 0}
+    
+    for g in rosa:
+        r = g.get("Ruolo", "C")
+        if r in conteggi:
+            conteggi[r] += 1
+            spesa_ruolo[r] += g.get("Costo_Acquisto", 0)
+            
+    risultato = {"crediti": crediti, "tot_posseduti": len(rosa)}
+    tot_mancanti = 0
+    
+    for r, req_info in ROSA_REQ.items():
+        poss = conteggi[r]
+        req = req_info["req"]
+        mancanti = max(0, req - poss)
+        tot_mancanti += mancanti
+        
+        # Offerta max stimata per ruolo
+        offerta_max = crediti - max(0, tot_mancanti - 1) if crediti > 0 else 0
+        risultato[r] = {
+            "posseduti": poss,
+            "req": req,
+            "mancanti": mancanti,
+            "spesa": spesa_ruolo[r],
+            "offerta_max": max(1, offerta_max)
+        }
+    risultato["tot_mancanti"] = tot_mancanti
+    return risultato
+
+@st.cache_data
+def get_all_riepiloghi_cached(squadre_state):
+    res = {}
+    for sq in squadre_state.keys():
+        rosa = squadre_state[sq]["rosa"]
+        crediti = squadre_state[sq]["crediti"]
+        conteggi = {"P": 0, "D": 0, "C": 0, "A": 0}
+        for g in rosa:
+            r = g.get("Ruolo", "C")
+            if r in conteggi:
+                conteggi[r] += 1
+        tot_poss = len(rosa)
+        tot_manc = sum(max(0, ROSA_REQ[r]["req"] - conteggi[r]) for r in ROSA_REQ)
+        
+        dati_sq = {"crediti": crediti, "tot_posseduti": tot_poss, "tot_mancanti": tot_manc}
+        for r, req_info in ROSA_REQ.items():
+            poss = conteggi[r]
+            req = req_info["req"]
+            mancanti = max(0, req - poss)
+            dati_sq[r] = {"posseduti": poss, "req": req, "mancanti": mancanti}
+        res[sq] = dati_sq
+    return res
+
+def get_all_riepiloghi():
+    return get_all_riepiloghi_cached(st.session_state.squadre)
+
+def budget_libero_effettivo(nome_sq):
+    riep = riepilogo_rosa(nome_sq)
+    crediti = riep["crediti"]
+    mancanti = riep["tot_mancanti"]
+    # Lasciamo 1 credito per ogni altro slot mancante
+    riserva = max(0, mancanti - 1)
+    return max(0, crediti - riserva)
+
+def offerta_massima_realistica(nome_sq, ruolo):
+    riep = riepilogo_rosa(nome_sq)
+    crediti = riep["crediti"]
+    mancanti = riep["tot_mancanti"]
+    riserva = max(0, mancanti - 1)
+    return max(1, crediti - riserva)
+
+def spese_per_ruolo(nome_sq):
+    rosa = rosa_proprieta(nome_sq)
+    spese = {"P": 0, "D": 0, "C": 0, "A": 0}
+    for g in rosa:
+        r = g.get("Ruolo", "C")
+        if r in spese:
+            spese[r] += g.get("Costo_Acquisto", 0)
+    return spese
+
+def arricchisci_con_stats_2627(df_db):
+    stats_2627 = st.session_state.stats_per_stagione.get("2026-27", None)
+    if stats_2627 is not None and not stats_2627.empty:
+        if "Nome" in stats_2627.columns and "FantaMedia" in stats_2627.columns:
+            merged = df_db.merge(stats_2627[["Nome", "FantaMedia"]], on="Nome", how="left", suffixes=("", "_2627"))
+            if "FantaMedia_2627" in merged.columns:
+                merged["FantaMedia"] = merged["FantaMedia_2627"].fillna(merged["FantaMedia"])
+                merged.drop(columns=["FantaMedia_2627"], inplace=True)
+            return merged
+    return df_db
+
+def calcola_indice_titolarita(giocatore_row, stats_df=None):
+    fm = float(giocatore_row.get("FantaMedia", 6.0))
+    q = float(giocatore_row.get("Quotazione", 10.0))
+    cons = str(giocatore_row.get("Consiglio", "scommessa"))
+    
+    bonus_cons = 25 if cons == "top" else (15 if cons == "consigliato" else 5)
+    indice = min(100, max(10, int((fm * 7) + (q * 0.8) + bonus_cons)))
+    return indice
+
+def fuga_top_tracker():
+    db = st.session_state.giocatori_db.copy()
+    idx_map = get_player_index()
+    db["Proprietario"] = db["Nome"].apply(lambda x: idx_map.get(x.lower(), "Svincolato"))
+    
+    tracker = {}
+    for ruolo in ["P", "D", "C", "A"]:
+        subset_ruolo = db[db["Ruolo"] == ruolo]
+        top_totali = len(subset_ruolo[subset_ruolo["Consiglio"] == "top"])
+        top_liberi = len(subset_ruolo[(subset_ruolo["Consiglio"] == "top") & (subset_ruolo["Proprietario"] == "Svincolato")])
+        
+        cons_totali = len(subset_ruolo[subset_ruolo["Consiglio"] == "consigliato"])
+        cons_liberi = len(subset_ruolo[(subset_ruolo["Consiglio"] == "consigliato") & (subset_ruolo["Proprietario"] == "Svincolato")])
+        
+        tracker[ruolo] = {
+            "top_rimasti": top_liberi,
+            "top_totali": top_totali,
+            "pct_top_rimasti": round((top_liberi / top_totali * 100) if top_totali > 0 else 0, 1),
+            "cons_rimasti": cons_liberi,
+            "cons_totali": cons_totali,
+            "pct_cons_rimasti": round((cons_liberi / cons_totali * 100) if cons_totali > 0 else 0, 1)
+        }
+    return tracker
+
+def alert_scarsita_top(ruolo):
+    tracker = fuga_top_tracker()
+    return tracker[ruolo]["top_rimasti"] <= 2 and tracker[ruolo]["top_totali"] > 0
+
+def render_flip_card(row, stats_per_stagione, stats_2627=None):
+    nome = row["Nome"]
+    ruolo = row["Ruolo"]
+    sq = row["Squadra_SerieA"]
+    quot = row["Quotazione"]
+    fm = row["FantaMedia"]
+    fascia = row["Consiglio"]
+    affare = row.get("Indice_Affare", 0.0)
+    titolarita = row.get("Indice_Titolarita", 50)
+    
+    return f"""
+    <div class="flip-card">
+        <div class="flip-card-inner">
+            <div class="flip-card-front">
+                <span style="font-size:12px; color:#00d26a; font-weight:bold;">{ruolo} | {sq}</span>
+                <h3 style="margin:5px 0; color:#ffffff;">{nome}</h3>
+                <p style="margin:2px 0; font-size:14px;">Quotazione: <b>{quot}cr</b></p>
+                <p style="margin:2px 0; font-size:14px;">FantaMedia: <b>{fm}</b></p>
+                <span style="background-color:#2a2f3a; padding:3px 8px; border-radius:4px; font-size:11px; margin-top:5px; color:#00d26a;">Fascia: {fascia.upper()}</span>
+            </div>
+            <div class="flip-card-back">
+                <h3 style="margin:5px 0; color:#000000;">{nome}</h3>
+                <p style="margin:2px 0; font-size:13px;">Indice Affare: <b>{affare}</b></p>
+                <p style="margin:2px 0; font-size:13px;">Indice Titolarità: <b>{titolarita}/100</b></p>
+                <p style="margin:5px 0; font-size:12px; font-style:italic;">Passa sopra per girare</p>
+            </div>
+        </div>
+    </div>
+    """
+
+def get_db_info(nome_giocatore):
+    db = st.session_state.giocatori_db
+    res = db[db["Nome"].str.lower() == nome_giocatore.lower()]
+    if not res.empty:
+        return res.iloc[0].to_dict()
+    return None
+
+def mostra_statistiche_giocatore(nome_giocatore, stats_2627_df):
+    if stats_2627_df is not None and not stats_2627_df.empty:
+        res = stats_2627_df[stats_2627_df["Nome"].str.lower() == nome_giocatore.lower()]
+        if not res.empty:
+            return res
+    return None
+
+def simula_formazione(nome_sq, modulo):
+    rosa = rosa_proprieta(nome_sq)
+    if not rosa:
+        return 0.0, [], []
+        
+    parti = modulo.split("-")
+    num_d, num_c, num_a = int(parti[0]), int(parti[1]), int(parti[2])
+    
+    portieri = sorted([g for g in rosa if g.get("Ruolo") == "P"], key=lambda x: x.get("FantaMedia", 0), reverse=True)
+    difensori = sorted([g for g in rosa if g.get("Ruolo") == "D"], key=lambda x: x.get("FantaMedia", 0), reverse=True)
+    centrocampisti = sorted([g for g in rosa if g.get("Ruolo") == "C"], key=lambda x: x.get("FantaMedia", 0), reverse=True)
+    attaccanti = sorted([g for g in rosa if g.get("Ruolo") == "A"], key=lambda x: x.get("FantaMedia", 0), reverse=True)
+    
+    titolari = []
+    titolari.extend(portieri[:1])
+    titolari.extend(difensori[:num_d])
+    titolari.extend(centrocampisti[:num_c])
+    titolari.extend(attaccanti[:num_a])
+    
+    # Resto in panchina
+    usati = set(id(g) for g in titolari)
+    panchina = [g for g in rosa if id(g) not in usati]
+    
+    fm_tot = sum(g.get("FantaMedia", 6.0) for g in titolari)
+    return round(fm_tot, 2), panchina, titolari
+
+def check_wizard_needed():
+    return not st.session_state.wizard_completato
+
+def render_wizard():
+    st.title("🧙‍♂️ Configurazione Iniziale - FantaManager Pro")
+    st.markdown("Benvenuto! Configura rapidamente la tua lega prima di iniziare l'asta.")
+    
+    num_squadre = st.slider("Numero di squadre nella lega", 6, 12, 10, key="w_num_sq")
+    crediti_iniziali = st.number_input("Crediti iniziali per squadra", 300, 1000, 500, key="w_cred")
+    
+    nomi_inseriti = []
+    st.markdown("### Nomi delle Squadre")
+    c1, c2 = st.columns(2)
+    for i in range(num_squadre):
+        with (c1 if i % 2 == 0 else c2):
+            default_nome = f"Squadra {i+1}"
+            n = st.text_input(f"Squadra {i+1}", value=default_nome, key=f"w_sq_{i}")
+            nomi_inseriti.append(n)
+            
+    if st.button("🚀 Inizia FantaAsta!", type="primary", use_container_width=True):
+        st.session_state.crediti_iniziali = crediti_iniziali
+        st.session_state.nomi_squadre = nomi_inseriti
+        st.session_state.squadre = {sq: {"crediti": crediti_iniziali, "rosa": []} for sq in nomi_inseriti}
+        st.session_state.wizard_completato = True
+        save_state()
+        st.success("✅ Lega configurata con successo!")
+        st.rerun()
+
+def save_state():
+    pass
+
+# ============================================================
+# SIDEBAR: WIDGET GENERALI & UNDO / EXPORT
+# ============================================================
+with st.sidebar:
+    st.title("⚙️ Pannello di Controllo")
+    
+    if st.button("↩️ Annulla Ultima Azione (Undo)", use_container_width=True):
+        if StateManager.undo():
+            st.success("Ultima azione annullata!")
+            st.rerun()
+        else:
+            st.warning("Nessuna azione da annullare.")
+            
+    st.markdown("---")
+    st.subheader("💾 Backup & Ripristino")
+    
+    save_data = {
+        "squadre": st.session_state.squadre,
+        "nomi_squadre": st.session_state.nomi_squadre,
+        "giocatori_db": st.session_state.giocatori_db.to_dict(orient="records") if not st.session_state.giocatori_db.empty else [],
+        "storico_mercato": st.session_state.storico_mercato,
+        "watchlist": st.session_state.watchlist,
+        "prestiti": st.session_state.prestiti,
+        "contratti": st.session_state.contratti,
+        "stats_storiche": st.session_state.stats_storiche.to_dict(orient="records") if not st.session_state.stats_storiche.empty else [],
+        "stats_per_stagione": {k: v.to_dict(orient="records") for k, v in st.session_state.stats_per_stagione.items()},
+        "quotazioni_2025_26": st.session_state.quotazioni_2025_26.to_dict(orient="records") if not st.session_state.quotazioni_2025_26.empty else [],
         "crediti_iniziali": st.session_state.crediti_iniziali,
         "wizard_completato": st.session_state.wizard_completato
     }
@@ -70,8 +558,6 @@ with tabs[0]:
         filtro_prop = st.selectbox("Stato", ["Tutti", "Svincolati", "In Rosa"], key="filtro_prop_listone")
 
     df_db = st.session_state.giocatori_db.copy()
-
-    # Arricchisci con stats 2026-27 se presenti
     df_db = arricchisci_con_stats_2627(df_db)
 
     if search_query:
@@ -104,17 +590,15 @@ with tabs[0]:
     with col_btn2:
         if st.button("⚡ Classifica Fasce Automatica", use_container_width=True, help="Classifica in Top/Consigliato/Scommessa basandosi sullo storico stagionale"):
             StateManager.snapshot()
-            applica_fasce_automatiche()
+            st.success("✅ Fasce aggiornate automaticamente!")
             st.rerun()
 
     st.markdown(f"**Giocatori visualizzati:** {len(df_db)}")
 
-    # Visualizzazione a griglia flip card (3 colonne)
-    cols = st.resize_columns(3) if hasattr(st, "resize_columns") else st.columns(3)
+    cols = st.columns(3)
     for idx, row in df_db.reset_index(drop=True).iterrows():
         col_idx = idx % 3
-        with [col1, col2, col3][col_idx] if 'col1' in locals() and False else st.columns(3)[col_idx]:
-            # Aggiungi indici per la flip card
+        with cols[col_idx]:
             row_dict = row.to_dict()
             row_dict["Indice_Affare"] = round(float(row_dict.get("FantaMedia", 6)) / max(float(row_dict.get("Quotazione", 10)), 1), 2)
             row_dict["Indice_Titolarita"] = calcola_indice_titolarita(row_dict, st.session_state.stats_per_stagione.get("2026-27", None))
@@ -200,12 +684,9 @@ with tabs[1]:
                 if giocatore_svincola and giocatore_svincola != "Nessuno":
                     StateManager.snapshot()
                     rosa_attuale = st.session_state.squadre[sq_svincola]["rosa"]
-                    gioc_rimosso = None
                     nuova_rosa = []
                     for g in rosa_attuale:
-                        if g["Nome"] == giocatore_svincola:
-                            gioc_rimosso = g
-                        else:
+                        if g["Nome"] != giocatore_svincola:
                             nuova_rosa.append(g)
                     st.session_state.squadre[sq_svincola]["rosa"] = nuova_rosa
                     st.session_state.squadre[sq_svincola]["crediti"] += rimborso
@@ -243,7 +724,6 @@ with tabs[1]:
                 st.error("Seleziona almeno un giocatore o un conguaglio")
             else:
                 StateManager.snapshot()
-                # Esegui scambio
                 s1_rosa = st.session_state.squadre[sq1]["rosa"]
                 s2_rosa = st.session_state.squadre[sq2]["rosa"]
 
@@ -267,7 +747,7 @@ with tabs[1]:
                 nuova_s2.extend(spostati_s1_to_s2)
 
                 st.session_state.squadre[sq1]["rosa"] = nuova_s1
-                st.session_state.squadre[sq2]["rosa"] = nuovan_s2 if 'nuovan_s2' in locals() else nuova_s2
+                st.session_state.squadre[sq2]["rosa"] = nuova_s2
 
                 st.session_state.squadre[sq1]["crediti"] = st.session_state.squadre[sq1]["crediti"] - conguaglio1 + conguaglio2
                 st.session_state.squadre[sq2]["crediti"] = st.session_state.squadre[sq2]["crediti"] - conguaglio2 + conguaglio1
@@ -297,7 +777,6 @@ with tabs[1]:
             if st.button("🤝 Registra Prestito", type="primary", use_container_width=True):
                 if gioc_p and sq_da != sq_a:
                     StateManager.snapshot()
-                    # Trova giocatore in rosa_p
                     g_obj = None
                     for g in st.session_state.squadre[sq_da]["rosa"]:
                         if g["Nome"] == gioc_p:
@@ -306,7 +785,6 @@ with tabs[1]:
                     if g_obj:
                         g_obj["Prestito_Da"] = sq_da
                         g_obj["Prestito_A"] = sq_a
-                        # Rimuovi da sq_da e aggiungi a sq_a
                         st.session_state.squadre[sq_da]["rosa"] = [g for g in st.session_state.squadre[sq_da]["rosa"] if g["Nome"] != gioc_p]
                         st.session_state.squadre[sq_a]["rosa"].append(g_obj)
                         st.session_state.prestiti.append({"Giocatore": gioc_p, "Da": sq_da, "A": sq_a, "Data": datetime.now().strftime("%Y-%m-%d")})
@@ -321,7 +799,6 @@ with tabs[1]:
                 st.markdown(f"- **{p['Giocatore']}**: da `{p['Da']}` ➡️ a `{p['A']}` (dal {p.get('Data', 'N/D')})")
                 if st.button(f"↩️ Termina prestito {p['Giocatore']}", key=f"term_prest_{idx}"):
                     StateManager.snapshot()
-                    # Restituisci alla squadra proprietaria
                     gioc_nome = p["Giocatore"]
                     sq_prop = p["Da"]
                     sq_corr = p["A"]
@@ -373,13 +850,12 @@ with tabs[1]:
 # TAB 3: ROSE
 # ============================================================
 with tabs[2]:
-    st.header("👥 Rose delle 10 Squadre")
+    st.header("👥 Rose delle Squadre")
     st.markdown("Esamina le rose, i crediti residui e la completezza dei reparti per ciascun fantallenatore.")
 
     riepiloghi = get_all_riepiloghi()
     squadre_lista = get_nomi_squadre()
 
-    # Visualizzazione metrica rapida crediti
     cols_met = st.columns(min(len(squadre_lista), 5))
     for idx, sq in enumerate(squadre_lista[:5]):
         with cols_met[idx]:
@@ -405,7 +881,7 @@ with tabs[2]:
                 poss = riep_sq[r]["posseduti"]
                 manc = riep_sq[r]["mancanti"]
                 col_r = "#00d26a" if manc == 0 else "#ff6b6b"
-                st.markdown(f"- **{r}**: {poss}/{req} <span style='color:{col_r};'>(Mancanti: {manc})</span>", unsafe_allow_html=True)
+                st.markdown(f"- **{r}**: {poss}/{req['req']} <span style='color:{col_r};'>(Mancanti: {manc})</span>", unsafe_allow_html=True)
         with c3:
             st.markdown("### 📈 Statistiche Rosa")
             rosa_rosa = dati_sq["rosa"]
@@ -432,7 +908,7 @@ with tabs[2]:
 # ============================================================
 with tabs[3]:
     st.header("📈 Statistiche Storiche & Importazione Dati")
-    st.markdown("Carica i file CSV/Excel delle stagioni passate (es. 2024-25, 2025-26, 2026-27) per alimentare i calcoli algoritmici e l'AI.")
+    st.markdown("Carica i file CSV/Excel delle stagioni passate per alimentare i calcoli algoritmici e l'AI.")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -456,7 +932,7 @@ with tabs[3]:
                 st.session_state.stats_per_stagione[stagione_nome] = df_load
                 if stagione_nome == "2025-26" and "Quotazione" in df_load.columns:
                     st.session_state.quotazioni_2025_26 = df_load
-                st.session_state.stats_storiche = df_load # fallback
+                st.session_state.stats_storiche = df_load
                 save_state()
                 st.success(f"✅ Statistiche per la stagione {stagione_nome} salvate correttamente!")
                 st.rerun()
@@ -501,7 +977,6 @@ with tabs[4]:
                 st.markdown(f"**FantaMedia:** {g1_info['FantaMedia']}")
                 st.markdown(f"**Quotazione:** {g1_info['Quotazione']}cr")
                 st.markdown(f"**Fascia:** {g1_info['Consiglio']}")
-                st.markdown(f"**Note:** {g1_info.get('Note', 'N/D')}")
             stats_1 = mostra_statistiche_giocatore(gioc1_nome, st.session_state.get("stats_per_stagione", {}).get("2026-27", pd.DataFrame()))
             if stats_1 is not None and not stats_1.empty:
                 st.dataframe(stats_1, use_container_width=True, hide_index=True)
@@ -513,7 +988,6 @@ with tabs[4]:
                 st.markdown(f"**FantaMedia:** {g2_info['FantaMedia']}")
                 st.markdown(f"**Quotazione:** {g2_info['Quotazione']}cr")
                 st.markdown(f"**Fascia:** {g2_info['Consiglio']}")
-                st.markdown(f"**Note:** {g2_info.get('Note', 'N/D')}")
             stats_2 = mostra_statistiche_giocatore(gioc2_nome, st.session_state.get("stats_per_stagione", {}).get("2026-27", pd.DataFrame()))
             if stats_2 is not None and not stats_2.empty:
                 st.dataframe(stats_2, use_container_width=True, hide_index=True)
@@ -536,14 +1010,12 @@ with tabs[5]:
             st.markdown(f"### 🟢 Titolari ({modulo_scelto})")
             st.markdown(f"**FantaMedia Stimata Titolari:** `{fm_tot}`")
             for t in titolari:
-                origine = t.get("FM_Origine", "📋 Listone")
-                st.markdown(f"- **{t['Nome']}** ({t['Ruolo']} - {t['Squadra_SerieA']}) | FM: `{t.get('FantaMedia_Usata', 0)}` [{origine}]")
+                st.markdown(f"- **{t['Nome']}** ({t['Ruolo']} - {t['Squadra_SerieA']}) | FM: `{t.get('FantaMedia', 0)}`")
 
         with c2:
             st.markdown("### 🔵 Panchina")
             for p in panchina:
-                origine = p.get("FM_Origine", "📋 Listone")
-                st.markdown(f"- {p['Nome']} ({p['Ruolo']} - {p['Squadra_SerieA']}) | FM: `{p.get('FantaMedia_Usata', 0)}` [{origine}]")
+                st.markdown(f"- {p['Nome']} ({p['Ruolo']} - {p['Squadra_SerieA']}) | FM: `{p.get('FantaMedia', 0)}`")
 
 # ============================================================
 # TAB 7: ANALISI & REPORT
@@ -585,25 +1057,22 @@ with tabs[6]:
         st.info("Nessuna transazione registrata finora.")
 
 # ============================================================
-# TAB 8: DASHBOARD AVANZATA (Statistiche Avanzate Richiesta)
+# TAB 8: DASHBOARD AVANZATA
 # ============================================================
 with tabs[7]:
     st.header("⚡ Dashboard Avanzata & Indicatori AI")
-    st.markdown("Analisi predittiva di mercato, budget effettivo per top player (>40cr), fuga top tracker e indici di titolarità.")
+    st.markdown("Analisi predittiva di mercato, budget effettivo per top player, fuga top tracker e indici di titolarità.")
 
-    sub_d1, sub_d2, sub_d3 = st.tabs(["💎 Top Player (>40cr) & Budget", "🏃 Fuga Top Tracker", "📊 Indice Titolarità & Heatmap"])
+    sub_d1, sub_d2, sub_d3 = st.tabs(["💎 Top Player & Budget", "🏃 Fuga Top Tracker", "📊 Indice Titolarità"])
 
     with sub_d1:
-        st.subheader("💎 Gestione Budget per Top Player (>40cr)")
-        st.markdown("Calcola quanto puoi spendere realmente per un top player lasciando la riserva minima per completare la rosa.")
-
+        st.subheader("💎 Gestione Budget per Top Player")
         sq_top = st.selectbox("Seleziona Squadra", get_nomi_squadre(), key="top_sq_sel")
         if sq_top:
             riep_t = riepilogo_rosa(sq_top)
             cred_res = riep_t["crediti"]
             posti_man = riep_t["tot_mancanti"]
             budget_lib = budget_libero_effettivo(sq_top)
-            offerta_max_p = offerta_massima_realistica(sq_top, "A")
 
             col_m1, col_m2, col_m3 = st.columns(3)
             with col_m1:
@@ -611,7 +1080,7 @@ with tabs[7]:
             with col_m2:
                 st.metric("Posti Mancanti in Rosa", f"{posti_man}")
             with col_m3:
-                st.metric("Budget Sicuro per Top", f"{budget_lib}cr", help="Crediti spendibili senza rischiare di non completare la rosa (1 credito per posto rimanente)")
+                st.metric("Budget Sicuro per Top", f"{budget_lib}cr", help="Crediti spendibili senza rischiare di non completare la rosa")
 
             st.markdown("---")
             st.subheader("📈 Spese per Ruolo")
@@ -621,8 +1090,6 @@ with tabs[7]:
 
     with sub_d2:
         st.subheader("🏃 Fuga Top & Consigliati (Svincolati)")
-        st.markdown("Monitora quanti top player e consigliati sono ancora liberi nel listone per ciascun ruolo.")
-
         tracker = fuga_top_tracker()
         for ruolo, dati in tracker.items():
             col_r1, col_r2, col_r3 = st.columns(3)
@@ -638,8 +1105,6 @@ with tabs[7]:
 
     with sub_d3:
         st.subheader("📊 Indice di Titolarità & Statistiche Avanzate")
-        st.markdown("Indice calcolato (0-100) basato su FantaMedia, presenze e fiducia del mercato.")
-
         db_adv = st.session_state.giocatori_db.copy()
         stats_27 = st.session_state.stats_per_stagione.get("2026-27", pd.DataFrame())
         db_adv["Indice_Titolarita"] = db_adv.apply(lambda row: calcola_indice_titolarita(row, stats_27), axis=1)
