@@ -391,6 +391,21 @@ def genera_statistiche_avanzate_complete(df_listone):
     df['Indice_Sostanza'] = df['Indice_Sostanza'].round(2)
 
     return df
+import streamlit as st
+
+# 1. Carichi il listone grezzo dei giocatori
+df_listone_grezzo = carica_tuo_listone_base() # La tua funzione di lettura esistente
+
+# 2. Applichi il modulo di generazione/completamento delle statistiche avanzate
+df_giocatori_avanzato = genera_statistiche_avanzate_complete(df_listone_grezzo)
+
+# 3. Ora puoi filtrarli e mostrarli su Streamlit per TUTTI i giocatori
+st.markdown("### 📊 Listone Serie A - Statistiche Avanzate e xG")
+st.dataframe(
+    df_giocatori_avanzato[['nome', 'squadra', 'ruolo', 'fantamedia', 'xg', 'xa', 'key_passes', 'Indice_Pericolosita', 'Indice_Sostanza']],
+    use_container_width=True,
+    hide_index=True
+)
 
 # ============================================================
 # AUTH & MULTI-USER
