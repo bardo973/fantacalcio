@@ -394,6 +394,30 @@ def genera_statistiche_avanzate_complete(df_listone):
 import streamlit as st
 
 # 1. Carichi il listone grezzo dei giocatori
+import streamlit as st
+import pandas as pd
+import sqlite3
+
+@st.cache_data
+def carica_listone():
+    """Carica il listone completo dei giocatori dal database o da file."""
+    try:
+        # Tentativo di connessione al database SQLite dell'app
+        conn = sqlite3.connect("fanta_vault.db")
+        df = pd.read_sql("SELECT * FROM giocatori", conn)
+        conn.close()
+        return df
+    except Exception:
+        try:
+            # Fallback nel caso in cui tu stia usando un file CSV
+            return pd.read_csv("listone.csv")
+        except Exception as e:
+            st.error(f"Impossibile trovare la sorgente dati del listone: {e}")
+            return pd.DataFrame()
+
+# Ora la chiamata alla riga 397 funzionerà senza errori:
+df_listone_grezzo = carica_listone()
+df_giocatori_avanzato = genera_statistiche_avanzate_complete(df_listone_grezzo)
 df_listone_grezzo = carica_listone() # La tua funzione di lettura esistente
 
 # 2. Applichi il modulo di generazione/completamento delle statistiche avanzate
