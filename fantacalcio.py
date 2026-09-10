@@ -4725,151 +4725,119 @@ if menu == "🎯 Simulatore Rosa":
                 st.caption("❌ Disabilitato: deficit budget")
             elif not all(conti_sim[r] >= ROSA_REQ[r] for r in ROSA_REQ):
                 st.caption("❌ Disabilitato: rosa incompleta")
-def calcola_statistiche_fantalab_avanzate(df_giocatori):
-    """Aggiunge metriche avanzate in stile FantaLab (xG stimati, Indice Appetibilità, Fantamedia Ponderata)."""
+# ============================================================
+# STATISTICHE AVANZATE (Modulo Aggiuntivo)
+# ============================================================
+
+def calcola_statistiche_avanzate(df_giocatori, stats_per_stagione):
+    """Calcola metriche avanzate (Indice di Efficienza, Expected Bonus, Rating) per ogni giocatore."""
     if df_giocatori is None or df_giocatori.empty:
         return df_giocatori
-
+    
     df = df_giocatori.copy()
     
-    # Calcolo xG stimati basati su fantamedia e ruolo se mancanti
-    if "xG_stimati" not in df.columns:
-        df["xG_stimati"] = df.apply(
-            lambda r: round(float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.12 if str(r.get("Ruolo", "")).upper() == "A" else float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.04, 2), 
-            axis=1
-        )
+    # Se abbiamo le stats per stagione, aggreghiamo i dati storici
+    efficienze = []
+    expected_bonus = []
+    ratings = []
+    
+    for idx, row in df.iterrows():
+        nome = row.get("Nome", "")
+        fm = float(row.get("FantaMedia", 6.0))
+        quot = float(row.get("Quotazione", 10))
+        ruolo = row.get("Ruolo", "C")
         
-    # Calcolo xA stimati
-    if "xA_stimati" not in df.columns:
-        df["xA_stimati"] = df.apply(
-            lambda r: round(float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.08 if str(r.get("Ruolo", "")).upper() in ["C", "D"] else 0.02, 2), 
-            axis=1
-        )
+        # Cerca dati storici se disponibili
+        gol_tot, ast_tot, part_tot = 0, 0, 0
+        stagioni_trovate = 0
         
-    # Indice di Appetibilità (Rapporto tra Fantamedia e Quotazione)
-    if "Indice_Appetibilita" not in df.columns:
-        df["Indice_Appetibilita"] = df.apply(
-            lambda r: round((float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 10) / max(float(str(r.get("Quotazione", 10)).replace(",", ".")), 1), 2), 
-            axis=1
-        )
+        if stats_per_stagione:
+            for stag, sdf in stats_per_stagione.items():
+                if sdf is not None and not sdf.empty and "Nome" in sdf.columns:
+                    match = sdf[sdf["Nome"].str.lower() == nome.lower()]
+                    if not match.empty:
+                        r = match.iloc[0]
+                        try:
+                            gol_tot += float(r.get("Gol", 0))
+                            ast_tot += float(r.get("Assist", 0))
+                            part_tot += float(r.get("Partite", 0))
+                            stagioni_trovate += 1
+                        except:
+                            pass
+                            
+        # Indice di Efficienza (Bonus prodotti per partita o rapporto rendimento/prezzo)
+        if part_tot > 0:
+            bonus_per_match = (gol_tot * 3 + ast_tot * 1) / part_tot
+        else:
+            # Stima basata su ruolo e fantamedia se mancano dati storici dettagliati
+            bonus_per_match = max(0, (fm - 6.0)) * 0.8
+            
+        efficienza = round(bonus_per_match * 10, 2)
+        efficienze.append(efficienza)
         
+        # Expected Bonus (xB) stimato in base a fantamedia, ruolo e quotazione
+        moltiplicatore_ruolo = {"P": 0.1, "D": 0.4, "C": 0.9, "A": 1.5}.get(ruolo, 0.7)
+        xB = round(max(0.5, (fm - 5.5) * moltiplicatore_ruolo + (quot / 20)), 2)
+        expected_bonus.append(xB)
+        
+        # Rating Avanzato 0-100
+        base_rating = min(60, (fm / 10) * 60)
+        bonus_valore = min(40, (quot / 90) * 40)
+        rating = round(base_rating + bonus_valore, 1)
+        ratings.append(rating)
+        
+    df["Indice_Efficienza"] = efficienze
+    df["Expected_Bonus_xB"] = expected_bonus
+    df["Rating_Avanzato"] = ratings
     return df
-st.markdown("""
-    <style>
-    .fanta-field {
-        position: relative;
-        width: 100%;
-        max-width: 650px;
-        height: 850px;
-        background: linear-gradient(to bottom, #1b5e20, #2e7d32);
-        border: 3px solid rgba(255, 255, 255, 0.8);
-        border-radius: 12px;
-        margin: 20px auto;
-        box-shadow: 0 6px 15px rgba(0,0,0,0.4);
-        overflow: hidden;
-    }
-    .fanta-field::before {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: rgba(255, 255, 255, 0.8);
-    }
-    .fanta-field::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 120px;
-        height: 120px;
-        border: 2px solid rgba(255, 255, 255, 0.8);
-        border-radius: 50%;
-    }
-    .center-dot {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 6px;
-        height: 6px;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: 50%;
-    }
-    .penalty-area-top {
-        position: absolute;
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 45%;
-        height: 16%;
-        border: 2px solid rgba(255, 255, 255, 0.8);
-        border-top: none;
-    }
-    .penalty-area-bottom {
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 45%;
-        height: 16%;
-        border: 2px solid rgba(255, 255, 255, 0.8);
-        border-bottom: none;
-    }
-    .player-token {
-        position: absolute;
-        transform: translate(-50%, -50%);
-        background: rgba(15, 23, 42, 0.85);
-        color: #ffffff;
-        padding: 6px 10px;
-        border-radius: 8px;
-        font-size: 11px;
-        font-weight: 600;
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        cursor: pointer;
-        transition: transform 0.2s;
-        width: 85px;
-    }
-    .player-token:hover {
-        transform: translate(-50%, -50%) scale(1.05);
-        background: rgba(30, 41, 59, 0.95);
-    }
-    .player-role {
-        font-size: 9px;
-        color: #94a3b8;
-        display: block;
-        margin-top: 2px;
-    }
-    </style>
-    <div class="fanta-field">
-        <div class="penalty-area-top"></div>
-        <div class="penalty-area-bottom"></div>
-        <div class="center-dot"></div>
-""", unsafe_allow_html=True)
-formazione_tattica = st.session_state.get("formazione_corrente", [
-    {"nome": "Provedel", "ruolo": "POR", "top": "90%", "left": "50%"},
-    {"nome": "Di Lorenzo", "ruolo": "D", "top": "75%", "left": "20%"},
-    {"nome": "Bremer", "ruolo": "D", "top": "75%", "left": "40%"},
-    {"nome": "Bastoni", "ruolo": "D", "top": "75%", "left": "60%"},
-    {"nome": "Dimarco", "ruolo": "D", "top": "75%", "left": "80%"},
-    {"nome": "Barella", "ruolo": "C", "top": "50%", "left": "25%"},
-    {"nome": "Calhanoglu", "ruolo": "C", "top": "50%", "left": "50%"},
-    {"nome": "Pulisic", "ruolo": "C", "top": "50%", "left": "75%"},
-    {"nome": "Leao", "ruolo": "A", "top": "25%", "left": "25%"},
-    {"nome": "Thuram", "ruolo": "A", "top": "20%", "left": "50%"},
-    {"nome": "Lautaro", "ruolo": "A", "top": "25%", "left": "75%"}
-])
-
-for p in formazione_tattica:
-    st.markdown(f"""
-        <div class="player-token" style="top: {p['top']}; left: {p['left']};">
-            {p['nome']}
-            <span class="player-role">{p['ruolo']}</span>
-        </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True) 
+ def render_sezione_statistiche_avanzate():
+    st.header("📊 Statistiche Avanzate & Analytics")
+    st.markdown("Analisi approfondita basata su metriche avanzate, indice di efficienza e Expected Bonus (xB).")
+    
+    db = st.session_state.get("giocatori_db", pd.DataFrame())
+    stats_st = st.session_state.get("stats_per_stagione", {})
+    
+    if db.empty:
+        st.warning("⚠️ Nessun giocatore presente nel listone.")
+        return
+        
+    # Calcola statistiche avanzate
+    df_avanzate = calcola_statistiche_avanzate(db, stats_st)
+    
+    # Filtri rapidi
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        ruolo_sel = st.selectbox("Filtra per Ruolo", ["Tutti", "P", "D", "C", "A"])
+    with col2:
+        ordinamento = st.selectbox("Ordina per", ["Rating Avanzato 🏆", "Expected Bonus (xB) 📈", "Indice Efficienza ⚡", "Quotazione 💰"])
+    with col3:
+        soglia_min = st.slider("Quotazione Minima", 1, 90, 1)
+        
+    # Applicazione filtri
+    df_filtered = df_avanzate[df_avanzate["Quotazione"] >= soglia_min]
+    if ruolo_sel != "Tutti":
+        df_filtered = df_filtered[df_filtered["Ruolo"] == ruolo_sel]
+        
+    # Ordinamento
+    if "Rating" in ordinamento:
+        df_filtered = df_filtered.sort_values("Rating_Avanzato", ascending=False)
+    elif "xB" in ordinamento:
+        df_filtered = df_filtered.sort_values("Expected_Bonus_xB", ascending=False)
+    elif "Efficienza" in ordinamento:
+        df_filtered = df_filtered.sort_values("Indice_Efficienza", ascending=False)
+    else:
+        df_filtered = df_filtered.sort_values("Quotazione", ascending=False)
+        
+    st.markdown("---")
+    
+    # Mostra tabella metrica avanzata
+    cols_mostrate = ["Nome", "Ruolo", "Squadra_SerieA", "Quotazione", "FantaMedia", "Rating_Avanzato", "Expected_Bonus_xB", "Indice_Efficienza"]
+    cols_presenti = [c for c in cols_mostrate if c in df_filtered.columns]
+    
+    st.dataframe(
+        df_filtered[cols_presenti].reset_index(drop=True),
+        use_container_width=True,
+        height=450
+    )
+    
+    st.info("💡 **Legenda Metriche:**\n- **Rating Avanzato:** Punteggio sintetico complessivo (0-100) calcolato su rendimento e valore di mercato.\n- **Expected Bonus (xB):** Stima statistica dei bonus attesi per partita.\n- **Indice di Efficienza:** Rapporto di conversione tra bonus e presenze/rendimento.")               
