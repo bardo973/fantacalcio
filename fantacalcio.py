@@ -1606,7 +1606,7 @@ menu = st.radio(
         "📋 Rose & Contratti",
         "🎯 Simulatore Rosa",
         "📈 Statistiche Storiche",
-        "⚙️ Importa & Esporta"
+        "⚙️ Importa & Esporta",
         "📊 Statistiche Avanzate"
     ],
     horizontal=True,
