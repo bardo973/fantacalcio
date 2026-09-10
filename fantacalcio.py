@@ -4850,8 +4850,6 @@ def calcola_statistiche_fantalab_avanzate(df_giocatori):
         <div class="penalty-area-bottom"></div>
         <div class="center-dot"></div>
 """, unsafe_allow_html=True)
-
-# Esempio di recupero e rendering delle posizioni della rosa schierata
 formazione_tattica = st.session_state.get("formazione_corrente", [
     {"nome": "Provedel", "ruolo": "POR", "top": "90%", "left": "50%"},
     {"nome": "Di Lorenzo", "ruolo": "D", "top": "75%", "left": "20%"},
