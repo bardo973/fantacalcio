@@ -394,7 +394,7 @@ def genera_statistiche_avanzate_complete(df_listone):
 import streamlit as st
 
 # 1. Carichi il listone grezzo dei giocatori
-df_listone_grezzo = carica_tuo_listone_base() # La tua funzione di lettura esistente
+df_listone_grezzo = carica_listone() # La tua funzione di lettura esistente
 
 # 2. Applichi il modulo di generazione/completamento delle statistiche avanzate
 df_giocatori_avanzato = genera_statistiche_avanzate_complete(df_listone_grezzo)
