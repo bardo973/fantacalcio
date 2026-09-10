@@ -4754,7 +4754,7 @@ def calcola_statistiche_fantalab_avanzate(df_giocatori):
         )
         
     return df
-   st.markdown("""
+st.markdown("""
     <style>
     .fanta-field {
         position: relative;
