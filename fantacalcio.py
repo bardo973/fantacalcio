@@ -4725,3 +4725,153 @@ if menu == "🎯 Simulatore Rosa":
                 st.caption("❌ Disabilitato: deficit budget")
             elif not all(conti_sim[r] >= ROSA_REQ[r] for r in ROSA_REQ):
                 st.caption("❌ Disabilitato: rosa incompleta")
+def calcola_statistiche_fantalab_avanzate(df_giocatori):
+    """Aggiunge metriche avanzate in stile FantaLab (xG stimati, Indice Appetibilità, Fantamedia Ponderata)."""
+    if df_giocatori is None or df_giocatori.empty:
+        return df_giocatori
+
+    df = df_giocatori.copy()
+    
+    # Calcolo xG stimati basati su fantamedia e ruolo se mancanti
+    if "xG_stimati" not in df.columns:
+        df["xG_stimati"] = df.apply(
+            lambda r: round(float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.12 if str(r.get("Ruolo", "")).upper() == "A" else float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.04, 2), 
+            axis=1
+        )
+        
+    # Calcolo xA stimati
+    if "xA_stimati" not in df.columns:
+        df["xA_stimati"] = df.apply(
+            lambda r: round(float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.08 if str(r.get("Ruolo", "")).upper() in ["C", "D"] else 0.02, 2), 
+            axis=1
+        )
+        
+    # Indice di Appetibilità (Rapporto tra Fantamedia e Quotazione)
+    if "Indice_Appetibilita" not in df.columns:
+        df["Indice_Appetibilita"] = df.apply(
+            lambda r: round((float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 10) / max(float(str(r.get("Quotazione", 10)).replace(",", ".")), 1), 2), 
+            axis=1
+        )
+        
+    return df
+   st.markdown("""
+    <style>
+    .fanta-field {
+        position: relative;
+        width: 100%;
+        max-width: 650px;
+        height: 850px;
+        background: linear-gradient(to bottom, #1b5e20, #2e7d32);
+        border: 3px solid rgba(255, 255, 255, 0.8);
+        border-radius: 12px;
+        margin: 20px auto;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        overflow: hidden;
+    }
+    .fanta-field::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.8);
+    }
+    .fanta-field::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 120px;
+        height: 120px;
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        border-radius: 50%;
+    }
+    .center-dot {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 6px;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 50%;
+    }
+    .penalty-area-top {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 45%;
+        height: 16%;
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        border-top: none;
+    }
+    .penalty-area-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 45%;
+        height: 16%;
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        border-bottom: none;
+    }
+    .player-token {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        background: rgba(15, 23, 42, 0.85);
+        color: #ffffff;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        cursor: pointer;
+        transition: transform 0.2s;
+        width: 85px;
+    }
+    .player-token:hover {
+        transform: translate(-50%, -50%) scale(1.05);
+        background: rgba(30, 41, 59, 0.95);
+    }
+    .player-role {
+        font-size: 9px;
+        color: #94a3b8;
+        display: block;
+        margin-top: 2px;
+    }
+    </style>
+    <div class="fanta-field">
+        <div class="penalty-area-top"></div>
+        <div class="penalty-area-bottom"></div>
+        <div class="center-dot"></div>
+""", unsafe_allow_html=True)
+
+# Esempio di recupero e rendering delle posizioni della rosa schierata
+formazione_tattica = st.session_state.get("formazione_corrente", [
+    {"nome": "Provedel", "ruolo": "POR", "top": "90%", "left": "50%"},
+    {"nome": "Di Lorenzo", "ruolo": "D", "top": "75%", "left": "20%"},
+    {"nome": "Bremer", "ruolo": "D", "top": "75%", "left": "40%"},
+    {"nome": "Bastoni", "ruolo": "D", "top": "75%", "left": "60%"},
+    {"nome": "Dimarco", "ruolo": "D", "top": "75%", "left": "80%"},
+    {"nome": "Barella", "ruolo": "C", "top": "50%", "left": "25%"},
+    {"nome": "Calhanoglu", "ruolo": "C", "top": "50%", "left": "50%"},
+    {"nome": "Pulisic", "ruolo": "C", "top": "50%", "left": "75%"},
+    {"nome": "Leao", "ruolo": "A", "top": "25%", "left": "25%"},
+    {"nome": "Thuram", "ruolo": "A", "top": "20%", "left": "50%"},
+    {"nome": "Lautaro", "ruolo": "A", "top": "25%", "left": "75%"}
+])
+
+for p in formazione_tattica:
+    st.markdown(f"""
+        <div class="player-token" style="top: {p['top']}; left: {p['left']};">
+            {p['nome']}
+            <span class="player-role">{p['ruolo']}</span>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("</div>", unsafe_allow_html=True) 
