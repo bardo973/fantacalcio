@@ -4781,3 +4781,32 @@ def render_posizioni_reali_card(giocatore):
     </div>
     """, unsafe_allow_html=True)
     render_posizioni_reali_card(giocatore)
+    def calcola_statistiche_fantalab_avanzate(df_giocatori):
+    """Aggiunge metriche avanzate in stile FantaLab (xG stimati, Indice Appetibilità, Fantamedia Ponderata)."""
+    if df_giocatori is None or df_giocatori.empty:
+        return df_giocatori
+
+    df = df_giocatori.copy()
+    
+    # Calcolo xG stimati basati su fantamedia e ruolo se mancanti
+    if "xG_stimati" not in df.columns:
+        df["xG_stimati"] = df.apply(
+            lambda r: round(float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.12 if str(r.get("Ruolo", "")).upper() == "A" else float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.04, 2), 
+            axis=1
+        )
+        
+    # Calcolo xA stimati
+    if "xA_stimati" not in df.columns:
+        df["xA_stimati"] = df.apply(
+            lambda r: round(float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 0.08 if str(r.get("Ruolo", "")).upper() in ["C", "D"] else 0.02, 2), 
+            axis=1
+        )
+        
+    # Indice di Appetibilità (Rapporto tra Fantamedia e Quotazione)
+    if "Indice_Appetibilita" not in df.columns:
+        df["Indice_Appetibilita"] = df.apply(
+            lambda r: round((float(str(r.get("FantaMedia", 6.0)).replace(",", ".")) * 10) / max(float(str(r.get("Quotazione", 10)).replace(",", ".")), 1), 2), 
+            axis=1
+        )
+        
+    return df
