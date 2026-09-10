@@ -1,3 +1,23 @@
+import pandas as pd
+import streamlit as st
+
+@st.cache_data(ttl=86400) # La cache dura 24 ore per evitare richieste continue
+def scarica_dati_automaticamente():
+    """Scarica automaticamente il listino o le statistiche aggiornate da un URL pubblico."""
+    # Sostituisci questo URL con il link "Raw" del file CSV caricato nel tuo repository GitHub o su un cloud pubblico
+    url_csv = https://www.fantacalcio-online.com/it/serie-a/2025-2026/statistiche 
+    try:
+        df = pd.read_csv(url_csv)
+        return df
+    except Exception as e:
+        # Se il download fallisce, restituisce un DataFrame vuoto per evitare il crash dell'app
+        return pd.DataFrame()
+
+# Inizializzazione automatica nel session_state se non è già presente o per aggiornarlo
+if "giocatori_db" not in st.session_state or st.session_state["giocatori_db"].empty:
+    df_auto = scarica_dati_automaticamente()
+    if not df_auto.empty:
+        st.session_state["giocatori_db"] = df_auto
 import streamlit as st
 import pandas as pd
 import json
