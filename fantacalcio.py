@@ -5,7 +5,7 @@ import streamlit as st
 def scarica_dati_automaticamente():
     """Scarica automaticamente il listino o le statistiche aggiornate da un URL pubblico."""
     # Sostituisci questo URL con il link "Raw" del file CSV caricato nel tuo repository GitHub o su un cloud pubblico
-    url_csv = https://www.fantacalcio-online.com/it/serie-a/2025-2026/statistiche 
+    url_csv =" https://www.fantacalcio-online.com/it/serie-a/2025-2026/statistiche" 
     try:
         df = pd.read_csv(url_csv)
         return df
