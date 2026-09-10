@@ -4923,3 +4923,88 @@ def gestisci_caricamento_statistiche():
             st.success(f"File '{uploaded_file.name}' caricato con successo! {len(df_caricato)} giocatori importati.")
         except Exception as e:
                 st.error(f"Errore durante la lettura del file: {e}")
+import sqlite3
+import pandas as pd
+import streamlit as st
+
+def carica_e_calcola_statistiche_avanzate(db_path="fanta_vault.db"):
+    """Carica i dati dal database e calcola gli indici avanzati per il fantacalcio."""
+    try:
+        conn = sqlite3.connect(db_path)
+        # Supponiamo di avere una tabella con i dati anagrafici e avanzati dei giocatori
+        query = """
+            SELECT g.id, g.nome, g.ruolo, g.squadra, g.fantamedia, 
+                   COALESCE(s.xg, 0.05) as xg, 
+                   COALESCE(s.xa, 0.05) as xa, 
+                   COALESCE(s.key_passes, 0.5) as key_passes,
+                   COALESCE(s.palle_recuperate, 2.0) as palle_recuperate
+            FROM giocatori g
+            LEFT JOIN statistiche_avanzate s ON g.id = s.giocatore_id
+        """
+        df = pd.read_sql(query, conn)
+        conn.close()
+    except Exception:
+        # Fallback con dati di esempio se il DB non è ancora strutturato con le tabelle avanzate
+        data = {
+            'nome': ["Lautaro", "Leao", "Pulisic", "Koopmeiners", "Barella"],
+            'ruolo': ["A", "A", "A", "C", "C"],
+            'squadra': ["Inter", "Milan", "Milan", "Juventus", "Inter"],
+            'fantamedia': [8.7, 7.5, 7.8, 7.3, 6.8],
+            'xg': [0.65, 0.38, 0.42, 0.28, 0.12],
+            'xa': [0.15, 0.30, 0.25, 0.32, 0.28],
+            'key_passes': [1.2, 2.1, 2.4, 2.8, 2.2],
+            'palle_recuperate': [0.8, 1.1, 1.5, 4.5, 5.8]
+        }
+        df = pd.DataFrame(data)
+
+    # Calcolo dell'Indice di Pericolosità Offensiva (IPO)
+    # Diamo più peso agli xG e agli xA, inserendo anche i passaggi chiave
+    df['Indice_Pericolosita'] = (df['xg'] * 3.5) + (df['xa'] * 3.0) + (df['key_passes'] * 0.4)
+    
+    # Per i centrocampisti e mediani, possiamo creare anche un indice di recupero/sostanza
+    df['Indice_Sostanza'] = df['palle_recuperate'] * 0.5 + (df['key_passes'] * 0.3)
+
+    return df
+
+# Integrazione nella UI di Streamlit
+st.markdown("### 🎯 Analisi Avanzata e Indici di Rendimento")
+
+df_giocatori = carica_e_calcola_statistiche_avanzate()
+
+# Filtri interattivi per reparto
+ruolo_scelto = st.selectbox("Seleziona reparto per l'analisi", ["Tutti", "P", "D", "C", "A"])
+if ruolo_scelto != "Tutti":
+    df_filtrato = df_giocatori[df_giocatori['ruolo'] == ruolo_scelto]
+else:
+    df_filtrato = df_giocatori
+
+# Ordinamento per l'indice calcolato
+metrica_ordine = st.radio(
+    "Ordina per indicatore:", 
+    ["Indice di Pericolosità Offensiva", "Indice di Sostanza", "FantaMedia"], 
+    horizontal=True
+)
+
+colonna_sort = {
+    "Indice di Pericolosità Offensiva": "Indice_Pericolosita",
+    "Indice di Sostanza": "Indice_Sostanza",
+    "FantaMedia": "fantamedia"
+}[metrica_ordine]
+
+df_filtrato = df_filtrato.sort_values(by=colonna_sort, ascending=False)
+
+# Visualizzazione tabellare pulita con stili
+st.dataframe(
+    df_filtrato[['nome', 'squadra', 'ruolo', 'fantamedia', 'xg', 'xa', 'Indice_Pericolosita', 'Indice_Sostanza']],
+    use_container_width=True,
+    column_config={
+        "nome": "Giocatore",
+        "squadra": "Squadra",
+        "ruolo": "Ruolo",
+        "fantamedia": st.column_config.NumberColumn("FantaMedia", format="%.2f"),
+        "xg": st.column_config.NumberColumn("xG (90')", format="%.2f"),
+        "xa": st.column_config.NumberColumn("xA (90')", format="%.2f"),
+        "Indice_Pericolosita": st.column_config.NumberColumn("Indice Pericolosità", format="%.2f"),
+        "Indice_Sostanza": st.column_config.NumberColumn("Indice Sostanza", format="%.2f")
+    }
+)
