@@ -5008,3 +5008,99 @@ st.dataframe(
         "Indice_Sostanza": st.column_config.NumberColumn("Indice Sostanza", format="%.2f")
     }
 )
+import sqlite3
+import pandas as pd
+import streamlit as st
+
+@st.cache_data
+def carica_dati_complessivi():
+    """Carica l'intero listone dei giocatori e unisce le statistiche avanzate."""
+    try:
+        # 1. Connessione al database SQLite o lettura del listone CSV principale
+        conn = sqlite3.connect("fanta_vault.db")
+        df_listone = pd.read_sql("SELECT * FROM giocatori", conn)
+        
+        # 2. Tentativo di caricamento delle statistiche avanzate (es. da tabella dedicata o CSV)
+        df_avanzate = pd.read_sql("SELECT * FROM statistiche_avanzate", conn)
+        conn.close()
+        
+        # Unione dei dataset basata sul nome o ID del giocatore
+        df_completo = pd.merge(df_listone, df_avanzate, on="id", how="left")
+        
+    except Exception:
+        # Fallback nel caso in cui non esista ancora la tabella avanzata nel DB:
+        # Leggi direttamente il listone completo (es. da un file CSV caricato o locale)
+        try:
+            df_completo = pd.read_csv("listone_serie_a.csv") # Sostituisci con il nome del tuo file listone
+        except FileNotFoundError:
+            st.error("Impossibile trovare il file del listone o la tabella nel database.")
+            return pd.DataFrame()
+
+    # Gestione dei valori mancanti per i giocatori che non hanno ancora metriche avanzate registrate
+    colonne_metriche = ['xg', 'xa', 'key_passes', 'palle_recuperate']
+    for col in colonne_metriche:
+        if col not in df_completo.columns:
+            df_completo[col] = 0.0
+        else:
+            df_completo[col] = df_completo[col].fillna(0.0)
+
+    # Calcolo centralizzato degli indici avanzati per tutto il listone
+    df_completo['Indice_Pericolosita'] = (df_completo['xg'] * 3.5) + (df_completo['xa'] * 3.0) + (df_completo.get('key_passes', 0) * 0.4)
+    df_completo['Indice_Sostanza'] = (df_completo.get('palle_recuperate', 0) * 0.5) + (df_completo.get('key_passes', 0) * 0.3)
+
+    return df_completo
+
+# Integrazione nel flusso dell'app Streamlit
+st.markdown("### 📊 Listone Completo e Statistiche Avanzate")
+
+df_giocatori = carica_dati_complessivi()
+
+if not df_giocatori.empty:
+    # Filtri di controllo per navigare l'intero listone
+    col1, col2 = st.columns(2)
+    with col1:
+        ruolo_scelto = st.selectbox("Filtra per Ruolo", ["Tutti", "P", "D", "C", "A"])
+    with col2:
+        squadra_scelta = st.selectbox("Filtra per Squadra", ["Tutte"] + sorted(df_giocatori['squadra'].dropna().unique().tolist()))
+
+    # Applicazione filtri
+    df_filtrato = df_giocatori.copy()
+    if ruolo_scelto != "Tutti":
+        df_filtrato = df_filtrato[df_filtrato['ruolo'] == ruolo_scelto]
+    if squadra_scelta != "Tutte":
+        df_filtrato = df_filtrato[df_filtrato['squadra'] == squadra_scelta]
+
+    # Ordinamento interattivo
+    metrica_ordine = st.radio(
+        "Ordina per indicatore:", 
+        ["Indice di Pericolosità Offensiva", "Indice di Sostanza", "FantaMedia", "xG"], 
+        horizontal=True
+    )
+    
+    colonna_sort = {
+        "Indice di Pericolosità Offensiva": "Indice_Pericolosita",
+        "Indice di Sostanza": "Indice_Sostanza",
+        "FantaMedia": "fantamedia",
+        "xG": "xg"
+    }[metrica_ordine]
+
+    df_filtrato = df_filtrato.sort_values(by=colonna_sort, ascending=False)
+
+    # Visualizzazione tabellare estesa a tutti i giocatori
+    st.dataframe(
+        df_filtrato[['nome', 'squadra', 'ruolo', 'fantamedia', 'xg', 'xa', 'Indice_Pericolosita', 'Indice_Sostanza']],
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "nome": "Giocatore",
+            "squadra": "Squadra",
+            "ruolo": "Ruolo",
+            "fantamedia": st.column_config.NumberColumn("FantaMedia", format="%.2f"),
+            "xg": st.column_config.NumberColumn("xG (90')", format="%.2f"),
+            "xa": st.column_config.NumberColumn("xA (90')", format="%.2f"),
+            "Indice_Pericolosita": st.column_config.NumberColumn("Indice Pericolosità", format="%.2f"),
+            "Indice_Sostanza": st.column_config.NumberColumn("Indice Sostanza", format="%.2f")
+        }
+    )
+else:
+    st.warning("Nessun dato disponibile nel listone.")
