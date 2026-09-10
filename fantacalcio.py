@@ -4843,3 +4843,62 @@ def render_sezione_statistiche_avanzate():
     )
     
     st.info("💡 **Legenda Metriche:**\n- **Rating Avanzato:** Punteggio sintetico complessivo (0-100) calcolato su rendimento e valore di mercato.\n- **Expected Bonus (xB):** Stima statistica dei bonus attesi per partita.\n- **Indice di Efficienza:** Rapporto di conversione tra bonus e presenze/rendimento.")
+# ============================================================
+# MODULO AGGIORNAMENTO DATI DA INTERNET (Punto 1)
+# ============================================================
+
+import pandas as pd
+import streamlit as st
+
+@st.cache_data(ttl=3600) # Mantiene in cache i dati per 1 ora per evitare richieste continue
+def scarica_statistiche_internet():
+    """Scarica le statistiche aggiornate da un repository pubblico o file CSV online."""
+    # Nota: Sostituisci questo URL con un link valido a un file CSV pubblico (es. da GitHub) 
+    # che contenga almeno le colonne "Nome" e le metriche di interesse.
+    url_csv = "https://raw.githubusercontent.com/willymacc/fantacalcio-dataset/main/statistiche.csv" # Esempio di URL o un tuo link
+    
+    try:
+        df_web = pd.read_csv(url_csv)
+        return df_web
+    except Exception as e:
+        # Se l'URL di esempio non è attivo o non raggiungibile, restituisce un DataFrame vuoto
+        return pd.DataFrame()
+
+def render_pulsante_sincronizzazione_web():
+    """Aggiunge un pulsante nella UI per sincronizzare i dati con internet."""
+    st.subheader("🌐 Sincronizzazione Dati Online")
+    
+    if st.button("Aggiorna Statistiche da Internet"):
+        with st.spinner("Scaricamento dati in corso..."):
+            df_internet = scarica_statistiche_internet()
+            
+            if not df_internet.empty:
+                db_locale = st.session_state.get("giocatori_db", pd.DataFrame())
+                
+                if not db_locale.empty and "Nome" in df_internet.columns and "Nome" in db_locale.columns:
+                    # Esegue un merge unendo i dati esistenti con quelli freschi da internet basandosi sul "Nome"
+                    db_aggiornato = pd.merge(db_locale, df_internet, on="Nome", how="left", suffixes=('', '_web'))
+                    st.session_state["giocatori_db"] = db_aggiornato
+                    st.success("🎉 Database aggiornato con successo usando i dati da internet!")
+                else:
+                    st.warning("⚠️ Impossibile agganciare i dati: controlla che il file online abbia la colonna 'Nome'.")
+            else:
+                st.error("❌ Impossibile recuperare i dati dalla fonte online specificata.")
+import streamlit as st
+import pandas as pd
+
+def gestisci_caricamento_statistiche():
+    st.subheader("📁 Caricamento Statistiche / Listone")
+    uploaded_file = st.file_uploader("Carica il file CSV o Excel con le statistiche avanzate", type=["csv", "xlsx"])
+    
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df_caricato = pd.read_csv(uploaded_file)
+            else:
+                df_caricato = pd.read_excel(uploaded_file)
+                
+            st.session_state["giocatori_db"] = df_caricato
+            st.success(f"File '{uploaded_file.name}' caricato con successo! {len(df_caricato)} giocatori importati.")
+        except Exception as e:
+                st.error(f"Errore durante la lettura del file: {e}")
