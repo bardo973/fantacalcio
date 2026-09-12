@@ -398,28 +398,14 @@ class StateManager:
                 os.remove(tmp.name)
             raise
 
-    @staticmethod
-    def load():
-        pkl_path, json_path = get_user_save_paths()
-        if os.path.exists(pkl_path):
-            try:
-                with open(pkl_path, "rb") as f:
-                    data = pickle.load(f)
-                StateManager._hydrate(data)
-                return True
-            except Exception:
-                pass
-        if os.path.exists(json_path):
-            try:
-                with open(json_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                db = data.get("giocatori_db", [])
-                data["giocatori_db"] = pd.DataFrame(db) if db else pd.DataFrame(LISTONE_DEFAULT)
-                stats = data.get("stats_storiche", [])
-                data["stats_storiche"] = pd.DataFrame(stats) if stats else pd.DataFrame()
-                data["stats_per_stagione"] = {k: pd.DataFrame(v) if v else pd.DataFrame() for k, v in data.get("stats_per_stagione", {}).items()}
-                q25 = data.get("quotazioni_2025_26", [])
-                data["quotazioni_2025_26"] = pd.DataFrame(q25) if q25 else pd.DataFrame()
+def arricchisci_con_stats_2627(df_listone):
+    df = df_listone.copy()
+    if "stats_per_stagione" not in st.session_state:
+        return df
+    # ... (omissis) ...
+    if "FantaMedia" in df.columns:
+        df["FantaMedia"] = pd.to_numeric(df["FantaMedia"], errors="coerce")
+    return df   
                 StateManager._hydrate(data)
                 return True
             except Exception:
@@ -513,49 +499,14 @@ def get_giocatore_in_rosa(nome: str) -> Optional[Tuple[str, dict]]:
     return None
 
 def rosa_proprieta(squadra: str) -> List[dict]:
-    return [g for g in st.session_state.squadre[squadra]["rosa"]
-            if g.get("Prestito_Da") is None or g.get("Prestito_Da") == squadra]
-
-# ============================================================
-# UTILITY
-# ============================================================
-def fuzzy_match(name, choices, cutoff=0.75):
-    name_clean = str(name).strip().lower()
-    matches = difflib.get_close_matches(name_clean, [c.lower() for c in choices], n=1, cutoff=cutoff)
-    if matches:
-        idx = [c.lower() for c in choices].index(matches[0])
-        return choices[idx]
-    return None
-
-def get_quotazione_listone(nome):
-    db = st.session_state.giocatori_db
-    match = db[db["Nome"].str.lower() == nome.lower()]
-    if not match.empty:
-        return int(match.iloc[0]["Quotazione"])
-    nome_match = fuzzy_match(nome, db["Nome"].tolist())
-    if nome_match:
-        match = db[db["Nome"] == nome_match]
-        if not match.empty:
-            return int(match.iloc[0]["Quotazione"])
-    return None
-
-def get_db_info(nome):
-    db = st.session_state.giocatori_db
-    match = db[db["Nome"].str.lower() == nome.lower()]
-    if not match.empty:
-        return match.iloc[0].to_dict()
-    nome_match = fuzzy_match(nome, db["Nome"].tolist())
-    if nome_match:
-        match = db[db["Nome"] == nome_match]
-        if not match.empty:
-            return match.iloc[0].to_dict()
-    return None
-
-# ============================================================
-# BUSINESS LOGIC
-# ============================================================
-def calcola_prezzo_consigliato(g_info, stats_df=None):
-    nome = g_info.get("Nome", "")
+def _build_stats_html(nome, stats_per_stagione):
+    """Costruisce HTML con le statistiche storiche di un giocatore + mini grafico FM."""
+    rows = []
+    fm_points = []
+    # ... (omissis) ...
+    if not rows:
+        return '<div style="padding:8px;color:#888;font-size:0.8em;text-align:center;">📭 Nessuno storico disponibile</div>'
+    return chart_svg + f'<table style="width:100%;border-collapse:collapse;margin-top:8px;">...</table>'
     ruolo = g_info.get("Ruolo", "C")
     quot = float(g_info.get("Quotazione", 10))
     fm = float(g_info.get("FantaMedia", 6.0))
@@ -880,26 +831,26 @@ def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = 
             continue
         match = df[df["Nome"].str.lower() == nome.lower()]
         if match.empty:
-            close = difflib.get_close_matches(
-                nome.lower(),
-                [n.lower() for n in df["Nome"].dropna().unique().tolist()],
-                n=1, cutoff=0.8
-            )
-            if close:
-                match = df[df["Nome"].str.lower() == close[0]]
-        if not match.empty:
-            row = match.iloc[0].to_dict()
-            row["Stagione"] = stagione
-            storico.append(row)
-
-    if not storico:
-        return "consigliato"
-
-    def safe_float(val, default=0.0):
-        try:
-            return float(val)
-        except (TypeError, ValueError):
-            return default
+for col in df_s.columns:
+    cl = str(col).lower().strip()
+    if any(k in cl for k in ['nome','giocatore','calciatore','name','player','cognome']):
+        col_map[col] = 'Nome'
+    elif any(k in cl for k in ['stagione','anno','season','year']):
+        col_map[col] = 'Stagione'
+    elif any(k in cl for k in ['gol','goal','reti']):
+        col_map[col] = 'Gol'
+    elif 'assist' in cl:
+        col_map[col] = 'Assist'
+    elif any(k in cl for k in ['fm','fantamedia','fanta media','media']):
+        col_map[col] = 'FantaMedia'
+    elif any(k in cl for k in ['partite','presenze','pg','match','played']):
+        col_map[col] = 'Partite'
+    elif 'rigor' in cl:
+        col_map[col] = 'Rigori'
+    elif any(k in cl for k in ['amm','yellow','gialli']):
+        col_map[col] = 'Ammonizioni'
+    elif any(k in cl for k in ['esp','red','rossi']):
+        col_map[col] = 'Espulsioni'
 
     def safe_int(val, default=0):
         try:
