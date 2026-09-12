@@ -1232,6 +1232,77 @@ def _numeric_column(df, column):
     return pd.to_numeric(df[column], errors="coerce").fillna(0.0)
 
 
+def normalizza_file_statistiche(df, stagione_default=None):
+    """Normalizza un CSV/Excel reale senza creare o sostituire nomi di giocatori."""
+    result = _normalizza_colonne_avanzate(df.copy())
+    result.columns = [str(column).strip() for column in result.columns]
+    canonical = {
+        "Nome", "Stagione", "Ruolo", "FantaMedia", "Partite", "Gol", "Assist",
+        "Rigori", "Ammonizioni", "Espulsioni", "xG", "xA", "Minuti", "Tiri",
+        "Tiri_in_porta", "Clean_Sheet", "Parate", "Rigori_Parati", "Gol_Subiti",
+    }
+    renames = {}
+    for column in result.columns:
+        if column in canonical:
+            continue
+        normalized = str(column).lower().strip().replace("_", " ")
+        target = None
+        if any(value in normalized for value in ["nome", "giocatore", "calciatore", "player", "name"]):
+            target = "Nome"
+        elif any(value in normalized for value in ["stagione", "anno", "season", "year"]):
+            target = "Stagione"
+        elif any(value in normalized for value in ["xg", "expected goals", "expected_goals"]):
+            target = "xG"
+        elif any(value in normalized for value in ["xa", "expected assists", "expected_assists"]):
+            target = "xA"
+        elif any(value in normalized for value in ["minuti", "minutes", "minute", "mins"]):
+            target = "Minuti"
+        elif any(value in normalized for value in ["tiri in porta", "shots on target", "shots_on_target", "sot"]):
+            target = "Tiri_in_porta"
+        elif any(value in normalized for value in ["tiri", "shots", "shot"]):
+            target = "Tiri"
+        elif any(value in normalized for value in ["clean sheet", "clean_sheet", "cleansheet"]):
+            target = "Clean_Sheet"
+        elif any(value in normalized for value in ["parate", "saves", "save"]):
+            target = "Parate"
+        elif any(value in normalized for value in ["rigori parati", "rigori_parati", "penalties saved"]):
+            target = "Rigori_Parati"
+        elif any(value in normalized for value in ["gol subiti", "gol_subiti", "goals conceded"]):
+            target = "Gol_Subiti"
+        elif any(value in normalized for value in ["gol", "goal", "goals", "reti"]):
+            target = "Gol"
+        elif normalized in {"a", "ast", "assist", "assists"} or "assist" in normalized:
+            target = "Assist"
+        elif any(value in normalized for value in ["fm", "fantamedia", "fanta media", "media"]):
+            target = "FantaMedia"
+        elif any(value in normalized for value in ["partite", "presenze", "pg", "match", "played", "apps", "appearances"]):
+            target = "Partite"
+        elif "rigor" in normalized:
+            target = "Rigori"
+        elif any(value in normalized for value in ["amm", "yellow", "gialli"]):
+            target = "Ammonizioni"
+        elif any(value in normalized for value in ["esp", "red", "rossi"]):
+            target = "Espulsioni"
+        if target and target not in result.columns and target not in renames.values():
+            renames[column] = target
+    result = result.rename(columns=renames)
+
+    if "Nome" not in result.columns:
+        return result, "Nome"
+    result["Nome"] = result["Nome"].astype(str).str.strip()
+    result = result[(result["Nome"] != "") & (result["Nome"].str.lower() != "nan")].copy()
+    if "Stagione" not in result.columns and stagione_default:
+        result["Stagione"] = stagione_default
+    for column in [
+        "FantaMedia", "Partite", "Gol", "Assist", "Rigori", "Ammonizioni",
+        "Espulsioni", "xG", "xA", "Minuti", "Tiri", "Tiri_in_porta",
+        "Clean_Sheet", "Parate", "Rigori_Parati", "Gol_Subiti",
+    ]:
+        if column in result.columns:
+            result[column] = pd.to_numeric(result[column], errors="coerce").fillna(0.0)
+    return result, None
+
+
 def prepara_statistiche_avanzate(stats_df):
     """
     Prepara statistiche per giocatore/stagione senza richiedere colonne avanzate.
@@ -1492,6 +1563,21 @@ if "initialized" not in st.session_state:
     if not load_state():
         for sq in get_nomi_squadre():
             st.session_state.squadre[sq] = {"crediti": CREDITI_INIZIALI, "rosa": []}
+
+    # Carica automaticamente il file reale incluso nel pacchetto, se presente.
+    # L'utente può sostituirlo dalla scheda Statistiche Avanzate con un proprio CSV/Excel.
+    if "stats_avanzate_caricate" not in st.session_state:
+        st.session_state.stats_avanzate_caricate = pd.DataFrame()
+        bundled_stats_path = "statistiche_avanzate_reali_2026_27.csv"
+        if os.path.exists(bundled_stats_path):
+            try:
+                bundled_raw = pd.read_csv(bundled_stats_path)
+                bundled_stats, bundled_missing = normalizza_file_statistiche(bundled_raw, "2026-27")
+                if not bundled_missing:
+                    st.session_state.stats_avanzate_caricate = bundled_stats
+            except Exception:
+                # Il file è opzionale: l'app resta utilizzabile anche senza il pacchetto dati.
+                st.session_state.stats_avanzate_caricate = pd.DataFrame()
 
     st.session_state.initialized = True
 
@@ -3967,55 +4053,17 @@ if menu == "📈 Statistiche Storiche":
                     df_s = pd.read_csv(up_stats, encoding='utf-8', on_bad_lines='skip')
                 else:
                     df_s = pd.read_excel(up_stats)
-                df_s.columns = [str(c).strip() for c in df_s.columns]
+                df_s, missing_column = normalizza_file_statistiche(df_s, stagione_sel)
 
-                col_map = {}
-                for col in df_s.columns:
-                    cl = str(col).lower().strip()
-                    if any(k in cl for k in ['nome','giocatore','calciatore','name','player','cognome']):
-                        col_map[col] = 'Nome'
-                    elif any(k in cl for k in ['stagione','anno','season','year']):
-                        col_map[col] = 'Stagione'
-                    elif any(k in cl for k in ['xg', 'expected goals', 'expected_goals']):
-                        col_map[col] = 'xG'
-                    elif any(k in cl for k in ['xa', 'expected assists', 'expected_assists']):
-                        col_map[col] = 'xA'
-                    elif any(k in cl for k in ['minuti', 'minutes', 'minute', 'mins']):
-                        col_map[col] = 'Minuti'
-                    elif any(k in cl for k in ['tiri in porta', 'shots on target', 'shots_on_target', 'sot']):
-                        col_map[col] = 'Tiri_in_porta'
-                    elif any(k in cl for k in ['tiri', 'shots', 'shot']):
-                        col_map[col] = 'Tiri'
-                    elif any(k in cl for k in ['clean sheet', 'clean_sheet', 'cleansheet']):
-                        col_map[col] = 'Clean_Sheet'
-                    elif any(k in cl for k in ['parate', 'saves', 'save']):
-                        col_map[col] = 'Parate'
-                    elif any(k in cl for k in ['rigori parati', 'rigori_parati', 'penalties saved']):
-                        col_map[col] = 'Rigori_Parati'
-                    elif any(k in cl for k in ['gol subiti', 'gol_subiti', 'goals conceded']):
-                        col_map[col] = 'Gol_Subiti'
-                    elif any(k in cl for k in ['gol','goal','reti']):
-                        col_map[col] = 'Gol'
-                    elif 'assist' in cl:
-                        col_map[col] = 'Assist'
-                    elif any(k in cl for k in ['fm','fantamedia','fanta media','media']):
-                        col_map[col] = 'FantaMedia'
-                    elif any(k in cl for k in ['partite','presenze','pg','match','played']):
-                        col_map[col] = 'Partite'
-                    elif 'rigor' in cl:
-                        col_map[col] = 'Rigori'
-                    elif any(k in cl for k in ['amm','yellow','gialli']):
-                        col_map[col] = 'Ammonizioni'
-                    elif any(k in cl for k in ['esp','red','rossi']):
-                        col_map[col] = 'Espulsioni'
-                df_s = df_s.rename(columns=col_map)
-
-                if 'Nome' not in df_s.columns:
+                if missing_column:
                     st.error(f"❌ Colonna 'Nome' non trovata. Colonne rilevate: {list(df_s.columns)}")
                     st.info("💡 Assicurati che il file contenga una colonna con il nome del giocatore")
                     st.stop()
 
-                df_s["Stagione"] = stagione_sel
+                if "Stagione" not in df_s.columns:
+                    df_s["Stagione"] = stagione_sel
+                else:
+                    df_s["Stagione"] = df_s["Stagione"].fillna(stagione_sel).astype(str)
                 st.session_state.stats_per_stagione[stagione_sel] = df_s
 
                 all_stats = []
@@ -4078,10 +4126,104 @@ if menu == "📈 Statistiche Storiche":
             "Indice costruito da FantaMedia, disponibilità, continuità, trend e contributo per 90 minuti. "
             "Le metriche xG/xA, tiri e minuti vengono calcolate solo se presenti nel file importato."
         )
-        if st.session_state.stats_storiche.empty:
-            st.info("Carica almeno una stagione nella scheda «Carica» per attivare l'analisi avanzata.")
+        st.markdown("### 📥 Carica le tue statistiche reali")
+        st.write(
+            "Carica un CSV o Excel con i nomi reali dei giocatori. Il file non viene completato con nomi inventati: "
+            "vengono usate esclusivamente le righe presenti nel file."
+        )
+        template_adv = pd.DataFrame(
+            columns=[
+                "Nome", "Ruolo", "Stagione", "FantaMedia", "Partite", "Minuti",
+                "Gol", "Assist", "xG", "xA", "Tiri", "Tiri_in_porta",
+                "Clean_Sheet", "Parate",
+            ]
+        )
+        st.download_button(
+            "⬇️ Scarica modello CSV",
+            data=template_adv.to_csv(index=False).encode("utf-8"),
+            file_name="modello_statistiche_avanzate.csv",
+            mime="text/csv",
+            key="download_advanced_template",
+        )
+        upload_col1, upload_col2 = st.columns([1, 2])
+        with upload_col1:
+            advanced_default_season = st.selectbox(
+                "Stagione del file",
+                STAGIONI,
+                index=len(STAGIONI) - 1,
+                key="advanced_default_season",
+            )
+        with upload_col2:
+            up_advanced = st.file_uploader(
+                "File statistiche avanzate reali",
+                type=["csv", "xlsx"],
+                key="up_advanced_real",
+                help="Colonna obbligatoria: Nome. Sono riconosciuti anche Giocatore, Player, FantaMedia, Presenze, Minutes, xG e xA.",
+            )
+
+        if "stats_avanzate_caricate" not in st.session_state:
+            st.session_state.stats_avanzate_caricate = pd.DataFrame()
+        if up_advanced is not None:
+            try:
+                if up_advanced.name.lower().endswith(".csv"):
+                    try:
+                        raw_advanced = pd.read_csv(up_advanced, encoding="utf-8", on_bad_lines="skip")
+                    except UnicodeDecodeError:
+                        up_advanced.seek(0)
+                        raw_advanced = pd.read_csv(up_advanced, encoding="latin-1", on_bad_lines="skip")
+                else:
+                    raw_advanced = pd.read_excel(up_advanced)
+                df_advanced, missing_advanced = normalizza_file_statistiche(
+                    raw_advanced,
+                    advanced_default_season,
+                )
+                if missing_advanced:
+                    st.error(
+                        "Il file non contiene una colonna per il nome del giocatore. "
+                        f"Colonne trovate: {list(raw_advanced.columns)}"
+                    )
+                elif df_advanced.empty:
+                    st.error("Il file non contiene righe con nomi validi.")
+                else:
+                    st.session_state.stats_avanzate_caricate = df_advanced
+                    st.success(
+                        f"✅ Caricati {len(df_advanced)} record reali e "
+                        f"{df_advanced['Nome'].nunique()} giocatori."
+                    )
+            except Exception as exc:
+                st.error(f"Errore nella lettura del file: {exc}")
+
+        if not st.session_state.stats_avanzate_caricate.empty:
+            source_stats = st.session_state.stats_avanzate_caricate
+            st.info(
+                f"Fonte attiva: file avanzato caricato ({len(source_stats)} righe). "
+                "Per tornare allo storico stagionale, rimuovi il file e usa la scheda «Carica»."
+            )
+            listone_names = set(
+                st.session_state.giocatori_db["Nome"].astype(str).str.casefold()
+            ) if "Nome" in st.session_state.giocatori_db.columns else set()
+            unmatched_names = sorted(
+                {
+                    str(name) for name in source_stats["Nome"]
+                    if str(name).casefold() not in listone_names
+                }
+            )
+            if unmatched_names:
+                st.warning(
+                    f"{len(unmatched_names)} nomi del file non sono presenti nel listone attuale. "
+                    "Le statistiche vengono comunque caricate, ma il ruolo non può essere associato automaticamente: "
+                    f"{', '.join(unmatched_names[:8])}{'…' if len(unmatched_names) > 8 else ''}"
+                )
+            if st.button("🗑️ Rimuovi file avanzato caricato", key="clear_advanced_upload"):
+                st.session_state.stats_avanzate_caricate = pd.DataFrame()
+                st.rerun()
         else:
-            df_adv, df_adv_detail = aggrega_statistiche_avanzate(st.session_state.stats_storiche)
+            source_stats = st.session_state.stats_storiche
+
+        if source_stats.empty:
+            st.info("Carica un file reale qui sopra oppure una stagione nella scheda «Carica».")
+        else:
+            df_adv, df_adv_detail = aggrega_statistiche_avanzate(source_stats)
             if df_adv.empty:
                 st.warning("Le statistiche caricate non contengono una colonna Nome utilizzabile.")
             else:
