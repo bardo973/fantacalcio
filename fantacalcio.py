@@ -1338,10 +1338,10 @@ def _metric_map_listone(column_candidates):
 
 def filtra_e_arricchisci_statistiche(stats_df):
     """
-    Mantiene solo i giocatori presenti nel listone corrente e aggiunge FM/MV.
-    Il nome visualizzato viene allineato a quello ufficiale del listone.
+    Usa il listone corrente come anagrafica: esclude i nomi esterni, ma aggiunge
+    anche i giocatori del listone che non hanno ancora statistiche caricate.
     """
-    if stats_df is None or stats_df.empty or "Nome" not in stats_df.columns:
+    if stats_df is None:
         return pd.DataFrame()
     db = st.session_state.get("giocatori_db", pd.DataFrame())
     if db is None or db.empty or "Nome" not in db.columns:
@@ -1350,22 +1350,64 @@ def filtra_e_arricchisci_statistiche(stats_df):
     listone_names = {}
     for name in db["Nome"].dropna().astype(str):
         listone_names[_chiave_nome(name)] = name
-    result = stats_df.copy()
+    result, missing_column = normalizza_file_statistiche(stats_df)
+    if missing_column:
+        result = pd.DataFrame()
+    if result.empty:
+        result = pd.DataFrame(columns=["Nome"])
     result["_Nome_Key"] = result["Nome"].map(_chiave_nome)
     result = result[result["_Nome_Key"].isin(listone_names)].copy()
-    if result.empty:
-        return result.drop(columns=["_Nome_Key"], errors="ignore")
-    result["Nome"] = result["_Nome_Key"].map(listone_names)
 
     fm_map = _metric_map_listone(["FantaMedia", "FM", "Fantamedia"])
     mv_map = _metric_map_listone(["Media_Voto", "MediaVoto", "MV", "Media"])
-    result["FantaMedia_Listone"] = result["_Nome_Key"].map(fm_map)
-    result["Media_Voto"] = result["_Nome_Key"].map(mv_map)
-    if "FantaMedia" not in result.columns:
-        result["FantaMedia"] = result["FantaMedia_Listone"]
-    else:
-        existing_fm = pd.to_numeric(result["FantaMedia"], errors="coerce")
-        result["FantaMedia"] = existing_fm.where(existing_fm.notna() & (existing_fm != 0), result["FantaMedia_Listone"])
+    role_map = {}
+    team_map = {}
+    for _, db_row in db.iterrows():
+        key = _chiave_nome(db_row["Nome"])
+        role_map[key] = db_row.get("Ruolo", "N/D")
+        team_map[key] = db_row.get("Squadra_SerieA", "N/D")
+
+    if not result.empty:
+        result["Nome"] = result["_Nome_Key"].map(listone_names)
+        result["Ruolo"] = result["_Nome_Key"].map(role_map).fillna(result.get("Ruolo", "N/D"))
+        result["Squadra_SerieA"] = result["_Nome_Key"].map(team_map).fillna("N/D")
+        result["FantaMedia_Listone"] = result["_Nome_Key"].map(fm_map)
+        result["Media_Voto"] = result["_Nome_Key"].map(mv_map)
+        if "FantaMedia" not in result.columns:
+            result["FantaMedia"] = result["FantaMedia_Listone"]
+        else:
+            existing_fm = pd.to_numeric(result["FantaMedia"], errors="coerce")
+            result["FantaMedia"] = existing_fm.where(
+                existing_fm.notna() & (existing_fm != 0),
+                result["FantaMedia_Listone"],
+            )
+        result["_Solo_Listone"] = False
+
+    # Una riga anagrafica garantisce la presenza di ogni giocatore del listone.
+    # Il flag evita di conteggiarla come una stagione reale nell'indice.
+    statistic_keys = set(result["_Nome_Key"]) if not result.empty else set()
+    missing_rows = []
+    for key, name in listone_names.items():
+        if key in statistic_keys:
+            continue
+        missing_rows.append(
+            {
+                "Nome": name,
+                "Ruolo": role_map.get(key, "N/D"),
+                "Squadra_SerieA": team_map.get(key, "N/D"),
+                "Stagione": "Listone",
+                "FantaMedia": fm_map.get(key, 0.0),
+                "FantaMedia_Listone": fm_map.get(key),
+                "Media_Voto": mv_map.get(key),
+                "Partite": 0,
+                "Gol": 0,
+                "Assist": 0,
+                "Minuti": 0,
+                "_Solo_Listone": True,
+            }
+        )
+    if missing_rows:
+        result = pd.concat([result, pd.DataFrame(missing_rows)], ignore_index=True)
     return result.drop(columns=["_Nome_Key"], errors="ignore")
 
 
@@ -1484,11 +1526,18 @@ def aggrega_statistiche_avanzate(stats_df):
         return pd.DataFrame(), prepared
 
     role_map = {}
+    team_map = {}
     if hasattr(st.session_state, "giocatori_db") and not st.session_state.giocatori_db.empty:
         role_map = dict(
             zip(
                 st.session_state.giocatori_db["Nome"].astype(str).map(_chiave_nome),
                 st.session_state.giocatori_db.get("Ruolo", pd.Series(dtype=str)),
+            )
+        )
+        team_map = dict(
+            zip(
+                st.session_state.giocatori_db["Nome"].astype(str).map(_chiave_nome),
+                st.session_state.giocatori_db.get("Squadra_SerieA", pd.Series(dtype=str)),
             )
         )
 
@@ -1498,16 +1547,22 @@ def aggrega_statistiche_avanzate(stats_df):
         group = group.sort_values("Stagione") if "Stagione" in group.columns else group
         role_series = group["Ruolo"] if "Ruolo" in group.columns else pd.Series(["N/D"])
         role = role_map.get(_chiave_nome(name), role_series.iloc[0])
-        fm = _numeric_column(group, "FantaMedia")
+        if "_Solo_Listone" in group.columns:
+            real_stats = group[group["_Solo_Listone"] != True].copy()
+        else:
+            real_stats = group.copy()
+        metric_group = real_stats if not real_stats.empty else group
+        has_real_stats = not real_stats.empty
+        fm = _numeric_column(metric_group, "FantaMedia")
         fm_listone = _numeric_column(group, "FantaMedia_Listone")
         mv_listone = _numeric_column(group, "Media_Voto")
-        matches = _numeric_column(group, "Partite").sum()
-        minutes = _numeric_column(group, "Minuti_Usati").sum()
-        goals = _numeric_column(group, "Gol").sum()
-        assists = _numeric_column(group, "Assist").sum()
-        xg = _numeric_column(group, "xG").sum()
-        xa = _numeric_column(group, "xA").sum()
-        seasons = max(1, len(group))
+        matches = _numeric_column(metric_group, "Partite").sum()
+        minutes = _numeric_column(metric_group, "Minuti_Usati").sum()
+        goals = _numeric_column(metric_group, "Gol").sum()
+        assists = _numeric_column(metric_group, "Assist").sum()
+        xg = _numeric_column(metric_group, "xG").sum()
+        xa = _numeric_column(metric_group, "xA").sum()
+        seasons = max(1, len(real_stats)) if has_real_stats else 1
         fm_mean = float(fm.mean()) if len(fm) else 0.0
         fm_current = float(fm_listone.dropna().mean()) if fm_listone.notna().any() and (fm_listone != 0).any() else 0.0
         mv_current = float(mv_listone.dropna().mean()) if mv_listone.notna().any() and (mv_listone != 0).any() else 0.0
@@ -1536,6 +1591,8 @@ def aggrega_statistiche_avanzate(stats_df):
             {
                 "Nome": name,
                 "Ruolo": role,
+                "Squadra": team_map.get(_chiave_nome(name), "N/D"),
+                "Dati Storici": "✅" if has_real_stats else "—",
                 "Stagioni": seasons,
                 "FM Media": round(fm_mean, 2),
                 "FM Listone": round(fm_current, 2),
@@ -4330,10 +4387,18 @@ if menu == "📈 Statistiche Storiche":
                 f"Fonte attiva: file avanzato caricato ({len(source_stats)} righe valide). "
                 "Per tornare allo storico stagionale, rimuovi il file e usa la scheda «Carica»."
             )
-            filtered_rows = len(source_stats_raw) - len(source_stats)
+            raw_keys = {
+                _chiave_nome(name)
+                for name in source_stats_raw["Nome"].dropna()
+            } if "Nome" in source_stats_raw.columns else set()
+            listone_keys = {
+                _chiave_nome(name)
+                for name in st.session_state.giocatori_db["Nome"].dropna()
+            } if "Nome" in st.session_state.giocatori_db.columns else set()
+            filtered_rows = sum(key not in listone_keys for key in raw_keys)
             if filtered_rows:
                 st.caption(
-                    f"🔒 {filtered_rows} righe escluse perché il giocatore non è presente nel listone corrente."
+                    f"🔒 {filtered_rows} giocatori esclusi perché non presenti nel listone corrente."
                 )
             if st.button("🗑️ Rimuovi file avanzato caricato", key="clear_advanced_upload"):
                 st.session_state.stats_avanzate_caricate = pd.DataFrame()
@@ -4370,7 +4435,8 @@ if menu == "📈 Statistiche Storiche":
                 m_adv4.metric("Indice migliore", f"{filtered_adv['Indice Avanzato'].max():.1f}" if not filtered_adv.empty else "—")
 
                 display_adv = [
-                    "Nome", "Ruolo", "Stagioni", "FM Listone", "MV Listone",
+                    "Nome", "Ruolo", "Squadra", "Dati Storici", "Stagioni",
+                    "FM Listone", "MV Listone",
                     "FM Media", "FM Ultima", "Trend FM",
                     "Partite", "Disponibilità %", "Gol", "Assist", "Bonus/90",
                     "xG/90", "xA/90", "Continuità %", "Indice Avanzato",
