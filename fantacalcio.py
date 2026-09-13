@@ -11,7 +11,6 @@ from typing import Dict, List, Optional, Any, Tuple
 import io
 import random
 import hashlib
-import unicodedata
 
 # ============================================================
 # CONFIGURAZIONE
@@ -1117,8 +1116,8 @@ def render_flip_card(row, stats_per_stagione=None, stats_2627=None):
     # FRONTE
     front_html = f'''<div style="background:linear-gradient(135deg, rgba(30,30,63,0.95) 0%, rgba(42,42,74,0.8) 100%);backdrop-filter:blur(10px);border-radius:12px;padding:14px;height:100%;box-sizing:border-box;border-left:4px solid {colore};box-shadow:0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);display:flex;flex-direction:column;justify-content:space-between;"><div><div style="font-size:1.1em;font-weight:bold;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.5);">{nome}</div><div style="font-size:0.85em;color:#aaa;">{sa} | <span style="color:{colore};font-weight:600;">{ruolo}</span></div></div><div style="text-align:center;margin:8px 0;"><div style="font-size:2em;font-weight:bold;color:#ffd700;">{fm}</div><div style="font-size:0.75em;color:#888;">FantaMedia</div></div><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;"><span style="background:{colore}30;color:{colore};padding:2px 8px;border-radius:12px;font-size:0.7em;font-weight:600;border:1px solid {colore}40;">{badge_fascia}</span><span style="background:rgba(26,26,46,0.6);color:#ddd;padding:2px 8px;border-radius:12px;font-size:0.7em;">{quot}cr</span>{pc_txt}</div>{flame_badge}{premium_badge}</div>'''
 
-    # RETRO: statistiche avanzate reali, senza grafico storico.
-    stats_html = _build_advanced_card_html(nome)
+    # RETRO (stats)
+    stats_html = _build_stats_html(nome, stats_per_stagione if stats_per_stagione else {})
     back_html = f'''<div style="background:linear-gradient(135deg, #0f0f24 0%, #1a1a2e 100%);border-radius:12px;padding:14px;height:100%;box-sizing:border-box;border:1px solid {colore}40;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:flex;flex-direction:column;justify-content:center;overflow:hidden;"><div style="font-size:0.85em;color:#00d26a;font-weight:bold;margin-bottom:6px;">📊 {nome}</div><div style="overflow-y:auto;max-height:140px;">{stats_html}</div></div>'''
 
     return f'''<div class="flip-card{premium_class}" style="height:200px;margin-bottom:10px;"><div class="flip-card-inner"><div class="flip-card-front">{front_html}</div><div class="flip-card-back">{back_html}</div></div></div>'''
@@ -1190,371 +1189,6 @@ def _build_stats_html(nome, stats_per_stagione):
     return chart_svg + f'<table style="width:100%;border-collapse:collapse;margin-top:8px;"><thead><tr style="border-bottom:1px solid #2a2a4a;"><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">Stagione</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">FM</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">⚽</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">🅰️</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">🏃</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">🎯</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
 
 
-
-
-# ============================================================
-# STATISTICHE AVANZATE
-# ============================================================
-ADVANCED_STAT_ALIASES = {
-    "xG": ["xg", "expected goals", "expected_goals", "expectedgoal"],
-    "xA": ["xa", "expected assists", "expected_assists", "expectedassist"],
-    "Minuti": ["minuti", "minutes", "minute", "mins", "min"],
-    "Tiri": ["tiri", "shots", "shot"],
-    "Tiri_in_porta": ["tiri in porta", "tiri_in_porta", "shots on target", "shots_on_target", "sot"],
-    "Clean_Sheet": ["clean sheet", "clean_sheet", "cleansheet", "clean sheets"],
-    "Parate": ["parate", "saves", "save"],
-    "Rigori_Parati": ["rigori parati", "rigori_parati", "penalties saved", "penalty saves"],
-    "Gol_Subiti": ["gol subiti", "gol_subiti", "goals conceded", "goals_conceded"],
-}
-
-
-def _normalizza_colonne_avanzate(df):
-    """Riconosce nomi italiani/inglesi comuni per le statistiche avanzate."""
-    result = df.copy()
-    renames = {}
-    used = set(result.columns)
-    for column in result.columns:
-        normalized = str(column).strip().lower().replace("_", " ")
-        for target, aliases in ADVANCED_STAT_ALIASES.items():
-            if target in used or column in renames:
-                continue
-            if any(alias in normalized for alias in aliases):
-                renames[column] = target
-                used.add(target)
-                break
-    if renames:
-        result = result.rename(columns=renames)
-    return result
-
-
-def _numeric_column(df, column):
-    if column not in df.columns:
-        return pd.Series(0.0, index=df.index)
-    return pd.to_numeric(df[column], errors="coerce").fillna(0.0)
-
-
-def normalizza_file_statistiche(df, stagione_default=None):
-    """Normalizza un CSV/Excel reale senza creare o sostituire nomi di giocatori."""
-    result = _normalizza_colonne_avanzate(df.copy())
-    result.columns = [str(column).strip() for column in result.columns]
-    canonical = {
-        "Nome", "Stagione", "Ruolo", "FantaMedia", "Partite", "Gol", "Assist",
-        "Rigori", "Ammonizioni", "Espulsioni", "xG", "xA", "Minuti", "Tiri",
-        "Tiri_in_porta", "Clean_Sheet", "Parate", "Rigori_Parati", "Gol_Subiti",
-    }
-    renames = {}
-    for column in result.columns:
-        if column in canonical:
-            continue
-        normalized = str(column).lower().strip().replace("_", " ")
-        target = None
-        if any(value in normalized for value in ["nome", "giocatore", "calciatore", "player", "name"]):
-            target = "Nome"
-        elif any(value in normalized for value in ["stagione", "anno", "season", "year"]):
-            target = "Stagione"
-        elif any(value in normalized for value in ["xg", "expected goals", "expected_goals"]):
-            target = "xG"
-        elif any(value in normalized for value in ["xa", "expected assists", "expected_assists"]):
-            target = "xA"
-        elif any(value in normalized for value in ["minuti", "minutes", "minute", "mins"]):
-            target = "Minuti"
-        elif any(value in normalized for value in ["tiri in porta", "shots on target", "shots_on_target", "sot"]):
-            target = "Tiri_in_porta"
-        elif any(value in normalized for value in ["tiri", "shots", "shot"]):
-            target = "Tiri"
-        elif any(value in normalized for value in ["clean sheet", "clean_sheet", "cleansheet"]):
-            target = "Clean_Sheet"
-        elif any(value in normalized for value in ["parate", "saves", "save"]):
-            target = "Parate"
-        elif any(value in normalized for value in ["rigori parati", "rigori_parati", "penalties saved"]):
-            target = "Rigori_Parati"
-        elif any(value in normalized for value in ["gol subiti", "gol_subiti", "goals conceded"]):
-            target = "Gol_Subiti"
-        elif any(value in normalized for value in ["gol", "goal", "goals", "reti"]):
-            target = "Gol"
-        elif normalized in {"a", "ast", "assist", "assists"} or "assist" in normalized:
-            target = "Assist"
-        elif any(value in normalized for value in ["fm", "fantamedia", "fanta media", "media"]):
-            target = "FantaMedia"
-        elif any(value in normalized for value in ["partite", "presenze", "pg", "match", "played", "apps", "appearances"]):
-            target = "Partite"
-        elif "rigor" in normalized:
-            target = "Rigori"
-        elif any(value in normalized for value in ["amm", "yellow", "gialli"]):
-            target = "Ammonizioni"
-        elif any(value in normalized for value in ["esp", "red", "rossi"]):
-            target = "Espulsioni"
-        if target and target not in result.columns and target not in renames.values():
-            renames[column] = target
-    result = result.rename(columns=renames)
-
-    if "Nome" not in result.columns:
-        return result, "Nome"
-    result["Nome"] = result["Nome"].astype(str).str.strip()
-    result = result[(result["Nome"] != "") & (result["Nome"].str.lower() != "nan")].copy()
-    if "Stagione" not in result.columns and stagione_default:
-        result["Stagione"] = stagione_default
-    for column in [
-        "FantaMedia", "Partite", "Gol", "Assist", "Rigori", "Ammonizioni",
-        "Espulsioni", "xG", "xA", "Minuti", "Tiri", "Tiri_in_porta",
-        "Clean_Sheet", "Parate", "Rigori_Parati", "Gol_Subiti",
-    ]:
-        if column in result.columns:
-            result[column] = pd.to_numeric(result[column], errors="coerce").fillna(0.0)
-    return result, None
-
-
-def _chiave_nome(nome):
-    """Chiave stabile per confrontare nomi con/senza accenti e punteggiatura."""
-    testo = unicodedata.normalize("NFKD", str(nome or ""))
-    testo = "".join(char for char in testo if not unicodedata.combining(char))
-    return "".join(char for char in testo.casefold() if char.isalnum())
-
-
-def _metric_map_listone(column_candidates):
-    """Restituisce una mappa nome normalizzato -> valore dal listone corrente."""
-    db = st.session_state.get("giocatori_db", pd.DataFrame())
-    if db is None or db.empty or "Nome" not in db.columns:
-        return {}
-    source_column = None
-    normalized_columns = {
-        str(column).lower().replace("_", "").replace(" ", ""): column
-        for column in db.columns
-    }
-    for candidate in column_candidates:
-        key = candidate.lower().replace("_", "").replace(" ", "")
-        if key in normalized_columns:
-            source_column = normalized_columns[key]
-            break
-    if source_column is None:
-        return {}
-    result = {}
-    for _, row in db[["Nome", source_column]].dropna(subset=["Nome"]).iterrows():
-        value = pd.to_numeric(pd.Series([row[source_column]]), errors="coerce").iloc[0]
-        if pd.notna(value):
-            result[_chiave_nome(row["Nome"])] = float(value)
-    return result
-
-
-def filtra_e_arricchisci_statistiche(stats_df):
-    """
-    Mantiene solo i giocatori presenti nel listone corrente e aggiunge FM/MV.
-    Il nome visualizzato viene allineato a quello ufficiale del listone.
-    """
-    if stats_df is None or stats_df.empty or "Nome" not in stats_df.columns:
-        return pd.DataFrame()
-    db = st.session_state.get("giocatori_db", pd.DataFrame())
-    if db is None or db.empty or "Nome" not in db.columns:
-        return pd.DataFrame()
-
-    listone_names = {}
-    for name in db["Nome"].dropna().astype(str):
-        listone_names[_chiave_nome(name)] = name
-    result = stats_df.copy()
-    result["_Nome_Key"] = result["Nome"].map(_chiave_nome)
-    result = result[result["_Nome_Key"].isin(listone_names)].copy()
-    if result.empty:
-        return result.drop(columns=["_Nome_Key"], errors="ignore")
-    result["Nome"] = result["_Nome_Key"].map(listone_names)
-
-    fm_map = _metric_map_listone(["FantaMedia", "FM", "Fantamedia"])
-    mv_map = _metric_map_listone(["Media_Voto", "MediaVoto", "MV", "Media"])
-    result["FantaMedia_Listone"] = result["_Nome_Key"].map(fm_map)
-    result["Media_Voto"] = result["_Nome_Key"].map(mv_map)
-    if "FantaMedia" not in result.columns:
-        result["FantaMedia"] = result["FantaMedia_Listone"]
-    else:
-        existing_fm = pd.to_numeric(result["FantaMedia"], errors="coerce")
-        result["FantaMedia"] = existing_fm.where(existing_fm.notna() & (existing_fm != 0), result["FantaMedia_Listone"])
-    return result.drop(columns=["_Nome_Key"], errors="ignore")
-
-
-def _get_card_statistiche_avanzate(nome):
-    """Ritorna una riga avanzata per la card, usando solo dati del listone corrente."""
-    source = st.session_state.get("stats_avanzate_caricate", pd.DataFrame())
-    if source is None or source.empty:
-        source = st.session_state.get("stats_storiche", pd.DataFrame())
-    filtered = filtra_e_arricchisci_statistiche(source)
-    if filtered.empty:
-        return None
-    key = _chiave_nome(nome)
-    match = filtered[filtered["Nome"].map(_chiave_nome) == key]
-    if match.empty:
-        return None
-    prepared = prepara_statistiche_avanzate(match)
-    return prepared.iloc[0] if not prepared.empty else None
-
-
-def _format_card_value(value, decimals=2):
-    if value is None or pd.isna(value):
-        return "—"
-    try:
-        return f"{float(value):.{decimals}f}"
-    except (TypeError, ValueError):
-        return str(value)
-
-
-def _build_advanced_card_html(nome):
-    """HTML compatto per il retro della card, senza grafici."""
-    row = _get_card_statistiche_avanzate(nome)
-    db_info = get_db_info(nome) or {}
-    fm_listone = db_info.get("FantaMedia", "—")
-    mv_listone = db_info.get("Media_Voto", db_info.get("MediaVoto", "—"))
-    if row is None:
-        return (
-            '<div style="padding:8px;color:#888;font-size:0.8em;text-align:center;">'
-            "📭 Nessuna statistica avanzata disponibile</div>"
-        )
-
-    values = [
-        ("FM", fm_listone, "#ffd700"),
-        ("MV", mv_listone, "#60a5fa"),
-        ("Pres.", row.get("Partite"), "#fff"),
-        ("Min.", row.get("Minuti_Usati"), "#fff"),
-        ("Gol", row.get("Gol"), "#ef4444"),
-        ("Assist", row.get("Assist"), "#22c55e"),
-        ("xG/90", row.get("xG_per_90"), "#f59e0b"),
-        ("xA/90", row.get("xA_per_90"), "#a78bfa"),
-        ("Bonus/90", row.get("Bonus_per_90"), "#00d26a"),
-    ]
-    cells = "".join(
-        f'<div style="background:#1a1a2e;border:1px solid #2a2a4a;border-radius:7px;padding:5px 4px;text-align:center;">'
-        f'<div style="color:#888;font-size:0.62em;">{label}</div>'
-        f'<div style="color:{color};font-size:0.82em;font-weight:bold;">{_format_card_value(value, 1 if label in {"FM", "MV"} else 2)}</div>'
-        "</div>"
-        for label, value, color in values
-    )
-    return f'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px;">{cells}</div>'
-
-
-def prepara_statistiche_avanzate(stats_df):
-    """
-    Prepara statistiche per giocatore/stagione senza richiedere colonne avanzate.
-    Se xG, xA, minuti o tiri non sono presenti, le metriche dipendenti restano a zero.
-    """
-    if stats_df is None or stats_df.empty or "Nome" not in stats_df.columns:
-        return pd.DataFrame()
-
-    df = _normalizza_colonne_avanzate(stats_df)
-    df["Nome"] = df["Nome"].astype(str).str.strip()
-    df = df[(df["Nome"] != "") & (df["Nome"].str.lower() != "nan")].copy()
-    if df.empty:
-        return df
-
-    for column in [
-        "FantaMedia", "Partite", "Gol", "Assist", "Rigori", "Ammonizioni",
-        "Espulsioni", "xG", "xA", "Minuti", "Tiri", "Tiri_in_porta",
-        "Clean_Sheet", "Parate", "Rigori_Parati", "Gol_Subiti",
-    ]:
-        if column in df.columns:
-            df[column] = pd.to_numeric(df[column], errors="coerce").fillna(0.0)
-
-    # Quando i minuti non sono presenti, la stima conservativa è 90 minuti per presenza.
-    minuti = _numeric_column(df, "Minuti")
-    partite = _numeric_column(df, "Partite")
-    minuti = minuti.where(minuti > 0, partite * 90)
-    df["Minuti_Usati"] = minuti
-
-    def per_90(column):
-        values = _numeric_column(df, column)
-        return (values * 90 / df["Minuti_Usati"].replace(0, pd.NA)).fillna(0).round(3)
-
-    df["Gol_per_90"] = per_90("Gol")
-    df["Assist_per_90"] = per_90("Assist")
-    df["Bonus_per_90"] = (df["Gol_per_90"] + df["Assist_per_90"]).round(3)
-    df["xG_per_90"] = per_90("xG")
-    df["xA_per_90"] = per_90("xA")
-    df["Tiri_per_90"] = per_90("Tiri")
-    df["Tiri_in_porta_per_90"] = per_90("Tiri_in_porta")
-    df["Parate_per_90"] = per_90("Parate")
-    df["Bonus_per_Partita"] = (
-        (_numeric_column(df, "Gol") + _numeric_column(df, "Assist"))
-        / partite.replace(0, pd.NA)
-    ).fillna(0).round(3)
-    df["Clean_Sheet_per_Partita"] = (
-        _numeric_column(df, "Clean_Sheet") / partite.replace(0, pd.NA)
-    ).fillna(0).round(3)
-    return df
-
-
-def aggrega_statistiche_avanzate(stats_df):
-    """Crea una classifica avanzata aggregata su tutte le stagioni disponibili."""
-    prepared = prepara_statistiche_avanzate(stats_df)
-    if prepared.empty:
-        return pd.DataFrame(), prepared
-
-    role_map = {}
-    if hasattr(st.session_state, "giocatori_db") and not st.session_state.giocatori_db.empty:
-        role_map = dict(
-            zip(
-                st.session_state.giocatori_db["Nome"].astype(str).map(_chiave_nome),
-                st.session_state.giocatori_db.get("Ruolo", pd.Series(dtype=str)),
-            )
-        )
-
-    rows = []
-    for name, group in prepared.groupby("Nome", sort=False):
-        group = group.copy()
-        group = group.sort_values("Stagione") if "Stagione" in group.columns else group
-        role_series = group["Ruolo"] if "Ruolo" in group.columns else pd.Series(["N/D"])
-        role = role_map.get(_chiave_nome(name), role_series.iloc[0])
-        fm = _numeric_column(group, "FantaMedia")
-        fm_listone = _numeric_column(group, "FantaMedia_Listone")
-        mv_listone = _numeric_column(group, "Media_Voto")
-        matches = _numeric_column(group, "Partite").sum()
-        minutes = _numeric_column(group, "Minuti_Usati").sum()
-        goals = _numeric_column(group, "Gol").sum()
-        assists = _numeric_column(group, "Assist").sum()
-        xg = _numeric_column(group, "xG").sum()
-        xa = _numeric_column(group, "xA").sum()
-        seasons = max(1, len(group))
-        fm_mean = float(fm.mean()) if len(fm) else 0.0
-        fm_current = float(fm_listone.dropna().mean()) if fm_listone.notna().any() and (fm_listone != 0).any() else 0.0
-        mv_current = float(mv_listone.dropna().mean()) if mv_listone.notna().any() and (mv_listone != 0).any() else 0.0
-        fm_std = float(fm.std(ddof=0)) if len(fm) else 0.0
-        fm_last = float(fm.iloc[-1]) if len(fm) else 0.0
-        fm_first = float(fm.iloc[0]) if len(fm) else 0.0
-        availability = min(100.0, float(matches) / (38 * seasons) * 100)
-        bonus_per_90 = float((goals + assists) * 90 / minutes) if minutes else 0.0
-        xg_per_90 = float(xg * 90 / minutes) if minutes else 0.0
-        xa_per_90 = float(xa * 90 / minutes) if minutes else 0.0
-        consistency = max(0.0, min(100.0, 100 - fm_std * 45))
-        trend = max(-10.0, min(10.0, (fm_last - fm_first) * 10))
-
-        # Pesi adattati al ruolo: rendimento, disponibilità, produzione e continuità.
-        fm_score = max(0.0, min(35.0, (fm_mean - 4.0) / 5.0 * 35))
-        availability_score = availability * 0.20
-        role_factor = {"P": 0.35, "D": 0.55, "C": 0.75, "A": 1.0}.get(role, 0.7)
-        contribution_score = min(20.0, bonus_per_90 / max(0.35 * role_factor, 0.1) * 10)
-        trend_score = max(0.0, min(10.0, 5.0 + trend / 2))
-        advanced_index = round(
-            min(100.0, fm_score + availability_score + contribution_score + consistency * 0.25 + trend_score),
-            1,
-        )
-
-        rows.append(
-            {
-                "Nome": name,
-                "Ruolo": role,
-                "Stagioni": seasons,
-                "FM Media": round(fm_mean, 2),
-                "FM Listone": round(fm_current, 2),
-                "MV Listone": round(mv_current, 2),
-                "FM Ultima": round(fm_last, 2),
-                "Trend FM": round(fm_last - fm_first, 2),
-                "Partite": int(matches),
-                "Disponibilità %": round(availability, 1),
-                "Gol": int(goals),
-                "Assist": int(assists),
-                "Bonus/90": round(bonus_per_90, 3),
-                "xG/90": round(xg_per_90, 3),
-                "xA/90": round(xa_per_90, 3),
-                "Continuità %": round(consistency, 1),
-                "Indice Avanzato": advanced_index,
-            }
-        )
-
-    return pd.DataFrame(rows).sort_values("Indice Avanzato", ascending=False), prepared
 
 
 # ============================================================
@@ -1693,21 +1327,6 @@ if "initialized" not in st.session_state:
     if not load_state():
         for sq in get_nomi_squadre():
             st.session_state.squadre[sq] = {"crediti": CREDITI_INIZIALI, "rosa": []}
-
-    # Carica automaticamente il file reale incluso nel pacchetto, se presente.
-    # L'utente può sostituirlo dalla scheda Statistiche Avanzate con un proprio CSV/Excel.
-    if "stats_avanzate_caricate" not in st.session_state:
-        st.session_state.stats_avanzate_caricate = pd.DataFrame()
-        bundled_stats_path = "statistiche_avanzate_reali_2026_27.csv"
-        if os.path.exists(bundled_stats_path):
-            try:
-                bundled_raw = pd.read_csv(bundled_stats_path)
-                bundled_stats, bundled_missing = normalizza_file_statistiche(bundled_raw, "2026-27")
-                if not bundled_missing:
-                    st.session_state.stats_avanzate_caricate = bundled_stats
-            except Exception:
-                # Il file è opzionale: l'app resta utilizzabile anche senza il pacchetto dati.
-                st.session_state.stats_avanzate_caricate = pd.DataFrame()
 
     st.session_state.initialized = True
 
@@ -4167,7 +3786,7 @@ if menu == "📈 Statistiche Storiche":
     if "stats_per_stagione" not in st.session_state:
         st.session_state.stats_per_stagione = {}
 
-    tabs = st.tabs(["⬆️ Carica", "📋 Visualizza", "🧠 Avanzate", "🗑️ Gestione"])
+    tabs = st.tabs(["⬆️ Carica", "📋 Visualizza", "🗑️ Gestione"])
 
     with tabs[0]:
         st.subheader("Carica statistiche per stagione")
@@ -4183,17 +3802,37 @@ if menu == "📈 Statistiche Storiche":
                     df_s = pd.read_csv(up_stats, encoding='utf-8', on_bad_lines='skip')
                 else:
                     df_s = pd.read_excel(up_stats)
-                df_s, missing_column = normalizza_file_statistiche(df_s, stagione_sel)
+                df_s.columns = [str(c).strip() for c in df_s.columns]
 
-                if missing_column:
+                col_map = {}
+                for col in df_s.columns:
+                    cl = str(col).lower().strip()
+                    if any(k in cl for k in ['nome','giocatore','calciatore','name','player','cognome']):
+                        col_map[col] = 'Nome'
+                    elif any(k in cl for k in ['stagione','anno','season','year']):
+                        col_map[col] = 'Stagione'
+                    elif any(k in cl for k in ['gol','goal','reti']):
+                        col_map[col] = 'Gol'
+                    elif 'assist' in cl:
+                        col_map[col] = 'Assist'
+                    elif any(k in cl for k in ['fm','fantamedia','fanta media','media']):
+                        col_map[col] = 'FantaMedia'
+                    elif any(k in cl for k in ['partite','presenze','pg','match','played']):
+                        col_map[col] = 'Partite'
+                    elif 'rigor' in cl:
+                        col_map[col] = 'Rigori'
+                    elif any(k in cl for k in ['amm','yellow','gialli']):
+                        col_map[col] = 'Ammonizioni'
+                    elif any(k in cl for k in ['esp','red','rossi']):
+                        col_map[col] = 'Espulsioni'
+                df_s = df_s.rename(columns=col_map)
+
+                if 'Nome' not in df_s.columns:
                     st.error(f"❌ Colonna 'Nome' non trovata. Colonne rilevate: {list(df_s.columns)}")
                     st.info("💡 Assicurati che il file contenga una colonna con il nome del giocatore")
                     st.stop()
 
-                if "Stagione" not in df_s.columns:
-                    df_s["Stagione"] = stagione_sel
-                else:
-                    df_s["Stagione"] = df_s["Stagione"].fillna(stagione_sel).astype(str)
+                df_s["Stagione"] = stagione_sel
                 st.session_state.stats_per_stagione[stagione_sel] = df_s
 
                 all_stats = []
@@ -4251,167 +3890,6 @@ if menu == "📈 Statistiche Storiche":
             st.info("Nessuna statistica storica caricata.")
 
     with tabs[2]:
-        st.subheader("🧠 Analisi avanzata giocatori")
-        st.caption(
-            "Indice costruito da FantaMedia, disponibilità, continuità, trend e contributo per 90 minuti. "
-            "Le metriche xG/xA, tiri e minuti vengono calcolate solo se presenti nel file importato."
-        )
-        st.markdown("### 📥 Carica le tue statistiche reali")
-        st.write(
-            "Carica un CSV o Excel con i nomi reali dei giocatori. Il file non viene completato con nomi inventati: "
-            "vengono usate esclusivamente le righe presenti nel file."
-        )
-        template_adv = pd.DataFrame(
-            columns=[
-                "Nome", "Ruolo", "Stagione", "FantaMedia", "Partite", "Minuti",
-                "Gol", "Assist", "xG", "xA", "Tiri", "Tiri_in_porta",
-                "Clean_Sheet", "Parate",
-            ]
-        )
-        st.download_button(
-            "⬇️ Scarica modello CSV",
-            data=template_adv.to_csv(index=False).encode("utf-8"),
-            file_name="modello_statistiche_avanzate.csv",
-            mime="text/csv",
-            key="download_advanced_template",
-        )
-        upload_col1, upload_col2 = st.columns([1, 2])
-        with upload_col1:
-            advanced_default_season = st.selectbox(
-                "Stagione del file",
-                STAGIONI,
-                index=len(STAGIONI) - 1,
-                key="advanced_default_season",
-            )
-        with upload_col2:
-            up_advanced = st.file_uploader(
-                "File statistiche avanzate reali",
-                type=["csv", "xlsx"],
-                key="up_advanced_real",
-                help="Colonna obbligatoria: Nome. Sono riconosciuti anche Giocatore, Player, FantaMedia, Presenze, Minutes, xG e xA.",
-            )
-
-        if "stats_avanzate_caricate" not in st.session_state:
-            st.session_state.stats_avanzate_caricate = pd.DataFrame()
-        if up_advanced is not None:
-            try:
-                if up_advanced.name.lower().endswith(".csv"):
-                    try:
-                        raw_advanced = pd.read_csv(up_advanced, encoding="utf-8", on_bad_lines="skip")
-                    except UnicodeDecodeError:
-                        up_advanced.seek(0)
-                        raw_advanced = pd.read_csv(up_advanced, encoding="latin-1", on_bad_lines="skip")
-                else:
-                    raw_advanced = pd.read_excel(up_advanced)
-                df_advanced, missing_advanced = normalizza_file_statistiche(
-                    raw_advanced,
-                    advanced_default_season,
-                )
-                if missing_advanced:
-                    st.error(
-                        "Il file non contiene una colonna per il nome del giocatore. "
-                        f"Colonne trovate: {list(raw_advanced.columns)}"
-                    )
-                elif df_advanced.empty:
-                    st.error("Il file non contiene righe con nomi validi.")
-                else:
-                    st.session_state.stats_avanzate_caricate = df_advanced
-                    st.success(
-                        f"✅ Caricati {len(df_advanced)} record reali e "
-                        f"{df_advanced['Nome'].nunique()} giocatori."
-                    )
-            except Exception as exc:
-                st.error(f"Errore nella lettura del file: {exc}")
-
-        if not st.session_state.stats_avanzate_caricate.empty:
-            source_stats_raw = st.session_state.stats_avanzate_caricate
-            source_stats = filtra_e_arricchisci_statistiche(source_stats_raw)
-            st.info(
-                f"Fonte attiva: file avanzato caricato ({len(source_stats)} righe valide). "
-                "Per tornare allo storico stagionale, rimuovi il file e usa la scheda «Carica»."
-            )
-            filtered_rows = len(source_stats_raw) - len(source_stats)
-            if filtered_rows:
-                st.caption(
-                    f"🔒 {filtered_rows} righe escluse perché il giocatore non è presente nel listone corrente."
-                )
-            if st.button("🗑️ Rimuovi file avanzato caricato", key="clear_advanced_upload"):
-                st.session_state.stats_avanzate_caricate = pd.DataFrame()
-                st.rerun()
-        else:
-            source_stats = filtra_e_arricchisci_statistiche(st.session_state.stats_storiche)
-
-        if source_stats.empty:
-            st.info("Carica un file reale qui sopra oppure una stagione nella scheda «Carica».")
-        else:
-            df_adv, df_adv_detail = aggrega_statistiche_avanzate(source_stats)
-            if df_adv.empty:
-                st.warning("Le statistiche caricate non contengono una colonna Nome utilizzabile.")
-            else:
-                c_adv1, c_adv2, c_adv3 = st.columns(3)
-                with c_adv1:
-                    role_options = ["Tutti"] + sorted(df_adv["Ruolo"].dropna().unique().tolist())
-                    role_filter = st.selectbox("Ruolo", role_options, key="advanced_role_filter")
-                with c_adv2:
-                    min_seasons = st.number_input("Stagioni minime", min_value=1, max_value=10, value=1, step=1, key="advanced_min_seasons")
-                with c_adv3:
-                    sort_options = ["Indice Avanzato", "FM Media", "Bonus/90", "Disponibilità %", "Trend FM"]
-                    sort_by = st.selectbox("Ordina per", sort_options, key="advanced_sort")
-
-                filtered_adv = df_adv[df_adv["Stagioni"] >= min_seasons].copy()
-                if role_filter != "Tutti":
-                    filtered_adv = filtered_adv[filtered_adv["Ruolo"] == role_filter]
-                filtered_adv = filtered_adv.sort_values(sort_by, ascending=False)
-
-                m_adv1, m_adv2, m_adv3, m_adv4 = st.columns(4)
-                m_adv1.metric("Giocatori analizzati", len(filtered_adv))
-                m_adv2.metric("FM media", f"{filtered_adv['FM Media'].mean():.2f}" if not filtered_adv.empty else "—")
-                m_adv3.metric("Disponibilità media", f"{filtered_adv['Disponibilità %'].mean():.1f}%" if not filtered_adv.empty else "—")
-                m_adv4.metric("Indice migliore", f"{filtered_adv['Indice Avanzato'].max():.1f}" if not filtered_adv.empty else "—")
-
-                display_adv = [
-                    "Nome", "Ruolo", "Stagioni", "FM Listone", "MV Listone",
-                    "FM Media", "FM Ultima", "Trend FM",
-                    "Partite", "Disponibilità %", "Gol", "Assist", "Bonus/90",
-                    "xG/90", "xA/90", "Continuità %", "Indice Avanzato",
-                ]
-                display_adv = [column for column in display_adv if column in filtered_adv.columns]
-                st.dataframe(filtered_adv[display_adv], use_container_width=True, hide_index=True)
-
-                if not filtered_adv.empty:
-                    selected_advanced = st.selectbox(
-                        "Analizza un giocatore",
-                        filtered_adv["Nome"].tolist(),
-                        key="advanced_player_selected",
-                    )
-                    selected_rows = df_adv_detail[df_adv_detail["Nome"] == selected_advanced].copy()
-                    if not selected_rows.empty:
-                        st.markdown("---")
-                        st.subheader(f"📌 Profilo avanzato — {selected_advanced}")
-                        profile = aggrega_statistiche_avanzate(selected_rows)[0]
-                        if not profile.empty:
-                            st.dataframe(profile, use_container_width=True, hide_index=True)
-                        numeric_detail = [
-                            column for column in [
-                                "FantaMedia", "Gol", "Assist", "xG", "xA",
-                                "Bonus_per_90", "Tiri_per_90", "Tiri_in_porta_per_90",
-                            ]
-                            if column in selected_rows.columns
-                        ]
-                        if numeric_detail and "Stagione" in selected_rows.columns:
-                            chart_detail = selected_rows.set_index("Stagione")[numeric_detail].apply(
-                                pd.to_numeric, errors="coerce"
-                            )
-                            st.line_chart(chart_detail)
-                        st.download_button(
-                            "⬇️ Scarica classifica avanzata CSV",
-                            data=filtered_adv.to_csv(index=False).encode("utf-8"),
-                            file_name="fantamanager_statistiche_avanzate.csv",
-                            mime="text/csv",
-                            key="download_advanced_stats",
-                        )
-
-    with tabs[3]:
         st.subheader("🗑️ Gestione dati storici")
         if st.session_state.stats_per_stagione:
             st.markdown("**Stagioni caricate:**")
@@ -4548,8 +4026,6 @@ if menu == "⚙️ Importa & Esporta":
                         col_mappa[col] = 'Quotazione_2025_26'
                     elif cl in ['fvm', 'fvm m', 'fanta media', 'fantamedia', 'fm', 'media']:
                         col_mappa[col] = 'FantaMedia'
-                    elif cl in ['mv', 'media voto', 'media_voto', 'voto medio', 'mediavoto']:
-                        col_mappa[col] = 'Media_Voto'
                     elif cl in ['rm', 'ruolo mantra', 'mantra']:
                         col_mappa[col] = 'Ruolo_Mantra'
                     elif cl in ['id', 'codice']:
@@ -4572,7 +4048,6 @@ if menu == "⚙️ Importa & Esporta":
                         'Squadra_SerieA': 'N/D',
                         'Quotazione': 10,
                         'FantaMedia': 6.0,
-                        'Media_Voto': None,
                         'Quotazione_2025_26': None,
                         'Ruolo_Mantra': '',
                         'Id': None,
@@ -4594,11 +4069,6 @@ if menu == "⚙️ Importa & Esporta":
                     if isinstance(fm, pd.DataFrame):
                         fm = fm.iloc[:, 0]
                     df_load['FantaMedia'] = pd.to_numeric(fm.astype(str).str.replace(',', '.', regex=False), errors='coerce').fillna(6.0)
-                    if 'Media_Voto' in df_load.columns:
-                        df_load['Media_Voto'] = pd.to_numeric(
-                            df_load['Media_Voto'].astype(str).str.replace(',', '.', regex=False),
-                            errors='coerce',
-                        )
 
                     if 'Prezzo_Consigliato' in df_load.columns:
                         df_load['Prezzo_Consigliato'] = pd.to_numeric(df_load['Prezzo_Consigliato'], errors='coerce')
@@ -4612,7 +4082,7 @@ if menu == "⚙️ Importa & Esporta":
                     df_load = df_load[df_load['Nome'].astype(str).str.strip() != '']
                     df_load = df_load[df_load['Nome'].astype(str).str.lower() != 'nan']
 
-                    cols_final = ['Nome', 'Ruolo', 'Squadra_SerieA', 'Quotazione', 'FantaMedia', 'Media_Voto', 'Consiglio', 'Note', 'Prezzo_Consigliato']
+                    cols_final = ['Nome', 'Ruolo', 'Squadra_SerieA', 'Quotazione', 'FantaMedia', 'Consiglio', 'Note', 'Prezzo_Consigliato']
                     if 'Quotazione_2025_26' in df_load.columns:
                         cols_final.append('Quotazione_2025_26')
                     if 'Ruolo_Mantra' in df_load.columns:
