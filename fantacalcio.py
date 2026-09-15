@@ -2747,8 +2747,7 @@ if menu == "🔨 Asta Live":
                                 "Quotazione": int(info["Quotazione"]), "FantaMedia": float(info["FantaMedia"]),
                                 "Costo_Acquisto": prezzo_vincita, "Scadenza_Anno": scad_acq
                             })
-# RIGA 740 MODIFICATA
-st.session_state.contratti[g_asta] = {"squadra": vincitore, "scadenza_anno": scad_acq, "scadenza_mese": datetime.now().month}
+                            st.session_state.contratti[g_asta] = {"squadra": vincitore, "scadenza_anno": scad_acq}
                             st.session_state.storico_mercato.insert(0, {
                                 "Data": datetime.now().strftime("%Y-%m-%d %H:%M"),
                                 "Operazione": "ASTA",
@@ -2910,8 +2909,7 @@ if menu == "🛒 Mercato":
                             "Quotazione": int(info["Quotazione"]), "FantaMedia": float(info["FantaMedia"]),
                             "Costo_Acquisto": prezzo, "Scadenza_Anno": scad_acq
                         })
-                        # RIGA 791 MODIFICATA
-st.session_state.contratti[g_sel] = {"squadra": sq, "scadenza_anno": scad_acq, "scadenza_mese": datetime.now().month}
+                        st.session_state.contratti[g_sel] = {"squadra": sq, "scadenza_anno": scad_acq}
                         st.session_state.storico_mercato.insert(0, {
                             "Data": datetime.now().strftime("%Y-%m-%d %H:%M"),
                             "Operazione": "ACQUISTO",
