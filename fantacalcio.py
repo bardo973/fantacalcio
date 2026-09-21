@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Any, Tuple
 import io
 import random
 import hashlib
+import unicodedata
 
 # ============================================================
 # CONFIGURAZIONE
@@ -382,6 +383,7 @@ class StateManager:
             "contratti": st.session_state.contratti,
             "giocatori_db": st.session_state.giocatori_db,
             "stats_storiche": st.session_state.stats_storiche,
+            "stats_avanzate_raw": st.session_state.get("stats_avanzate_raw", pd.DataFrame()),
             "stats_per_stagione": st.session_state.get("stats_per_stagione", {}),
             "crediti_iniziali": st.session_state.get("crediti_iniziali", CREDITI_INIZIALI),
             "quotazioni_2025_26": st.session_state.quotazioni_2025_26,
@@ -437,6 +439,7 @@ class StateManager:
         if "Prezzo_Consigliato" not in st.session_state.giocatori_db.columns:
             st.session_state.giocatori_db["Prezzo_Consigliato"] = None
         st.session_state.stats_storiche = data.get("stats_storiche", pd.DataFrame())
+        st.session_state.stats_avanzate_raw = data.get("stats_avanzate_raw", pd.DataFrame())
         st.session_state.stats_per_stagione = data.get("stats_per_stagione", {})
         st.session_state.crediti_iniziali = data.get("crediti_iniziali", CREDITI_INIZIALI)
         st.session_state.quotazioni_2025_26 = data.get("quotazioni_2025_26", pd.DataFrame())
@@ -550,6 +553,121 @@ def get_db_info(nome):
         if not match.empty:
             return match.iloc[0].to_dict()
     return None
+
+# ============================================================
+# STATISTICHE AVANZATE — abbinamento per cognome
+# ============================================================
+def _norm_txt(s) -> str:
+    """Normalizza una stringa: minuscolo, senza accenti né punteggiatura."""
+    s = str(s).strip().lower()
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = "".join(c if (c.isalnum() or c.isspace()) else " " for c in s)
+    return " ".join(s.split())
+
+
+def _rileva_colonna(df, keywords):
+    """Trova la prima colonna il cui nome normalizzato contiene una keyword."""
+    for col in df.columns:
+        cl = _norm_txt(col)
+        if any(k in cl for k in keywords):
+            return col
+    return None
+
+
+def abbina_statistiche_avanzate(df_stats, giocatori_db, col_nome=None, col_squadra=None, cutoff=0.72):
+    """Abbina le righe delle statistiche avanzate (nome + cognome) ai giocatori
+    del database (solo cognome), usando il cognome ed eventualmente la squadra.
+
+    Ritorna (mappa, report):
+      - mappa: dict {indice_riga_stats: nome_giocatore_db}
+      - report: dict con 'match', 'ambigui', 'non_trovati', 'col_nome', 'col_squadra'
+    """
+    if col_nome is None:
+        col_nome = _rileva_colonna(df_stats, ["nome", "giocatore", "calciatore", "player", "name", "cognome"])
+    if col_squadra is None:
+        col_squadra = _rileva_colonna(df_stats, ["squadra", "team", "club"])
+
+    db = giocatori_db.reset_index(drop=True)
+    giocatori = []
+    for _, g in db.iterrows():
+        giocatori.append({
+            "Nome": g["Nome"],
+            "norm": _norm_txt(g["Nome"]),
+            "squadra": _norm_txt(g.get("Squadra_SerieA", "")),
+        })
+
+    mappa = {}
+    match_list, ambigui, non_trovati = [], [], []
+
+    for i, row in df_stats.iterrows():
+        full = _norm_txt(row[col_nome]) if col_nome else ""
+        squad_stat = _norm_txt(row[col_squadra]) if col_squadra else ""
+        if not full:
+            continue
+        parole = full.split()
+        candidati = []
+        for g in giocatori:
+            cg = g["norm"]
+            if not cg:
+                continue
+            cg_parole = cg.split()
+            n = len(cg_parole)
+            if cg == full:
+                score = 1.0
+            elif full.endswith(" " + cg):
+                score = 0.97
+            elif all(p in parole for p in cg_parole):
+                score = 0.92
+            else:
+                coda = " ".join(parole[-n:]) if parole else ""
+                score = difflib.SequenceMatcher(None, cg, coda).ratio()
+            if score >= cutoff:
+                if squad_stat and g["squadra"] and squad_stat == g["squadra"]:
+                    score += 0.05
+                candidati.append((score, g["Nome"]))
+        if not candidati:
+            non_trovati.append((i, row[col_nome]))
+            continue
+        candidati.sort(key=lambda x: -x[0])
+        best = candidati[0][0]
+        migliori = [c for c in candidati if abs(c[0] - best) < 0.02]
+        if len(migliori) == 1:
+            mappa[i] = migliori[0][1]
+            match_list.append((i, row[col_nome], migliori[0][1]))
+        else:
+            ambigui.append((i, row[col_nome], [m[1] for m in migliori]))
+    return mappa, {
+        "match": match_list,
+        "ambigui": ambigui,
+        "non_trovati": non_trovati,
+        "col_nome": col_nome,
+        "col_squadra": col_squadra,
+    }
+
+
+def applica_statistiche_avanzate(df_stats, mappa, colonne_stat, prefisso="ADV_"):
+    """Aggiunge le colonne di statistiche avanzate al database giocatori,
+    abbinando ogni riga al giocatore indicato in `mappa` (indice -> Nome).
+    Ritorna il numero di giocatori aggiornati."""
+    db = st.session_state.giocatori_db.copy()
+    for c in colonne_stat:
+        col_target = prefisso + str(c)
+        if col_target not in db.columns:
+            db[col_target] = None
+    aggiornati = 0
+    for i_row, nome_g in mappa.items():
+        if i_row not in df_stats.index:
+            continue
+        r = df_stats.loc[i_row]
+        mask = db["Nome"] == nome_g
+        if not mask.any():
+            continue
+        for c in colonne_stat:
+            db.loc[mask, prefisso + str(c)] = r[c]
+        aggiornati += 1
+    st.session_state.giocatori_db = db
+    return aggiornati
 
 # ============================================================
 # BUSINESS LOGIC
@@ -1316,6 +1434,7 @@ if "initialized" not in st.session_state:
     if "Prezzo_Consigliato" not in st.session_state.giocatori_db.columns:
         st.session_state.giocatori_db["Prezzo_Consigliato"] = None
     st.session_state.stats_storiche = pd.DataFrame()
+    st.session_state.stats_avanzate_raw = pd.DataFrame()
     st.session_state.quotazioni_2025_26 = pd.DataFrame()
     st.session_state.stats_per_stagione = {}
     st.session_state.wizard_completato = False
@@ -1586,6 +1705,7 @@ menu = st.radio(
         "📋 Rose & Contratti",
         "🎯 Simulatore Rosa",
         "📈 Statistiche Storiche",
+        "⚡ Statistiche Avanzate",
         "⚙️ Importa & Esporta"
     ],
     horizontal=True,
@@ -3948,6 +4068,138 @@ if menu == "📈 Statistiche Storiche":
                 st.rerun()
         else:
             st.info("Nessuna stagione caricata.")
+
+# ============================================================
+# STATISTICHE AVANZATE (abbinamento per cognome)
+# ============================================================
+if menu == "⚡ Statistiche Avanzate":
+    st.header("⚡ Statistiche Avanzate — Abbinamento ai Giocatori")
+    st.markdown(
+        "Carica il file delle **statistiche avanzate** (dove i calciatori sono indicati con "
+        "**nome e cognome**). Il sistema abbina automaticamente ogni riga al giocatore del "
+        "tuo listone — che è salvato con il **solo cognome** — e aggiunge le statistiche "
+        "scelte a ciascun giocatore."
+    )
+
+    if "stats_avanzate_raw" not in st.session_state:
+        st.session_state.stats_avanzate_raw = pd.DataFrame()
+
+    up_adv = st.file_uploader("File statistiche avanzate", type=["csv", "xlsx"], key="up_adv_stats")
+    if up_adv is not None:
+        try:
+            if up_adv.name.endswith(".csv"):
+                df_adv = pd.read_csv(up_adv, encoding="utf-8", on_bad_lines="skip")
+            else:
+                df_adv = pd.read_excel(up_adv)
+            df_adv.columns = [str(c).strip() for c in df_adv.columns]
+            df_adv = df_adv.reset_index(drop=True)
+            st.session_state.stats_avanzate_raw = df_adv
+            st.success(f"✅ File caricato: {len(df_adv)} righe, {len(df_adv.columns)} colonne.")
+        except Exception as e:
+            st.error(f"Errore nella lettura del file: {e}")
+
+    df_adv = st.session_state.stats_avanzate_raw
+    if df_adv is not None and not df_adv.empty:
+        st.markdown("---")
+        st.subheader("1️⃣ Colonne del file")
+        colonne = list(df_adv.columns)
+        col_a, col_b = st.columns(2)
+        with col_a:
+            def_nome = _rileva_colonna(df_adv, ["nome", "giocatore", "calciatore", "player", "name", "cognome"])
+            idx_nome = colonne.index(def_nome) if def_nome in colonne else 0
+            col_nome = st.selectbox("Colonna con nome+cognome", colonne, index=idx_nome, key="adv_col_nome")
+        with col_b:
+            def_sq = _rileva_colonna(df_adv, ["squadra", "team", "club"])
+            opzioni_sq = ["(nessuna)"] + colonne
+            idx_sq = opzioni_sq.index(def_sq) if def_sq in opzioni_sq else 0
+            sel_sq = st.selectbox("Colonna squadra (per disambiguare)", opzioni_sq, index=idx_sq, key="adv_col_sq")
+            col_sq = None if sel_sq == "(nessuna)" else sel_sq
+
+        with st.expander("👁️ Anteprima file"):
+            st.dataframe(df_adv.head(20), use_container_width=True)
+
+        # --- Abbinamento ---
+        mappa, report = abbina_statistiche_avanzate(
+            df_adv, st.session_state.giocatori_db, col_nome=col_nome, col_squadra=col_sq
+        )
+
+        st.markdown("---")
+        st.subheader("2️⃣ Risultato abbinamento (per cognome)")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("✅ Abbinati", len(report["match"]))
+        m2.metric("❓ Ambigui", len(report["ambigui"]))
+        m3.metric("❌ Non trovati", len(report["non_trovati"]))
+
+        # Risoluzione ambigui
+        if report["ambigui"]:
+            st.markdown("**❓ Righe ambigue** — stesso cognome per più giocatori. Scegli quello giusto:")
+            for i_row, nome_file, opzioni in report["ambigui"]:
+                scelta = st.selectbox(
+                    f"'{nome_file}' →",
+                    ["(salta)"] + opzioni,
+                    key=f"adv_amb_{i_row}",
+                )
+                if scelta != "(salta)":
+                    mappa[i_row] = scelta
+
+        if report["non_trovati"]:
+            with st.expander(f"❌ {len(report['non_trovati'])} righe senza corrispondenza"):
+                st.write([n for _, n in report["non_trovati"]])
+                st.caption("Questi calciatori non sono nel listone o hanno un cognome troppo diverso: verranno ignorati.")
+
+        # --- Selezione colonne statistiche ---
+        st.markdown("---")
+        st.subheader("3️⃣ Statistiche da aggiungere ai giocatori")
+        escluse = {col_nome}
+        if col_sq:
+            escluse.add(col_sq)
+        colonne_stat_disp = [c for c in colonne if c not in escluse]
+        default_stat = [
+            c for c in colonne_stat_disp
+            if pd.api.types.is_numeric_dtype(df_adv[c])
+        ] or colonne_stat_disp
+        colonne_scelte = st.multiselect(
+            "Colonne da agganciare", colonne_stat_disp, default=default_stat, key="adv_cols_scelte"
+        )
+        prefisso = st.text_input("Prefisso colonne aggiunte", value="ADV_", key="adv_prefisso").strip() or "ADV_"
+
+        st.markdown("---")
+        if st.button("🔗 Abbina e aggiungi ai giocatori", type="primary", use_container_width=True):
+            if not colonne_scelte:
+                st.warning("Seleziona almeno una colonna di statistiche da aggiungere.")
+            elif not mappa:
+                st.warning("Nessun giocatore abbinato: controlla la colonna del nome o i dati.")
+            else:
+                try:
+                    StateManager.snapshot()
+                except Exception:
+                    pass
+                aggiornati = applica_statistiche_avanzate(df_adv, mappa, colonne_scelte, prefisso=prefisso)
+                save_state()
+                invalidate_cache()
+                st.success(f"✅ Statistiche avanzate aggiunte a **{aggiornati}** giocatori "
+                           f"({len(colonne_scelte)} colonne, prefisso '{prefisso}').")
+
+        # --- Vista colonne avanzate già presenti ---
+        db = st.session_state.giocatori_db
+        adv_cols = [c for c in db.columns if str(c).startswith(prefisso)]
+        if adv_cols:
+            st.markdown("---")
+            st.subheader("📊 Statistiche avanzate presenti nel listone")
+            vista = db[["Nome", "Ruolo", "Squadra_SerieA"] + adv_cols]
+            vista = vista[vista[adv_cols].notna().any(axis=1)]
+            st.dataframe(vista, use_container_width=True)
+            if st.button("🗑️ Rimuovi tutte le colonne avanzate", key="adv_reset"):
+                try:
+                    StateManager.snapshot()
+                except Exception:
+                    pass
+                st.session_state.giocatori_db = db.drop(columns=adv_cols)
+                save_state()
+                st.success("Colonne avanzate rimosse dal listone.")
+                st.rerun()
+    else:
+        st.info("Carica un file per iniziare l'abbinamento delle statistiche avanzate.")
 
 # ============================================================
 # 7. IMPORTA & ESPORTA
