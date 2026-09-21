@@ -1125,68 +1125,68 @@ def render_flip_card(row, stats_per_stagione=None, stats_2627=None):
 
 
 
+def _stat_value(row, aliases, default="—"):
+    """Legge una statistica accettando le intestazioni più comuni dei file importati."""
+    normalized = {
+        str(key).lower().strip().replace("_", " ").replace("-", " "): value
+        for key, value in row.items()
+    }
+    for alias in aliases:
+        key = alias.lower().strip().replace("_", " ").replace("-", " ")
+        if key in normalized and pd.notna(normalized[key]):
+            value = normalized[key]
+            if isinstance(value, float) and value.is_integer():
+                return int(value)
+            return value
+    return default
+
+
 def _build_stats_html(nome, stats_per_stagione):
-    """Costruisce HTML con le statistiche storiche di un giocatore + mini grafico FM."""
-    rows = []
-    fm_points = []
-    stagioni_label = []
-    for stagione, df in sorted(stats_per_stagione.items()):
-        if df.empty or "Nome" not in df.columns:
-            continue
-        match = df[df["Nome"].str.lower() == nome.lower()]
-        if match.empty:
-            close = difflib.get_close_matches(
-                nome.lower(),
-                [n.lower() for n in df["Nome"].dropna().unique().tolist()],
-                n=1, cutoff=0.8
-            )
-            if close:
-                match = df[df["Nome"].str.lower() == close[0]]
-        if not match.empty:
-            r = match.iloc[0]
-            fm = r.get("FantaMedia", "—")
-            gol = r.get("Gol", "—")
-            ast = r.get("Assist", "—")
-            part = r.get("Partite", "—")
-            rig = r.get("Rigori", "—")
-            rows.append(f'<tr><td style="padding:4px 8px;color:#aaa;font-size:0.8em;">{stagione}</td><td style="padding:4px 8px;color:#ffd700;font-size:0.85em;font-weight:bold;">{fm}</td><td style="padding:4px 8px;color:#fff;font-size:0.8em;">{gol}</td><td style="padding:4px 8px;color:#fff;font-size:0.8em;">{ast}</td><td style="padding:4px 8px;color:#fff;font-size:0.8em;">{part}</td><td style="padding:4px 8px;color:#fff;font-size:0.8em;">{rig}</td></tr>')
-            try:
-                fm_val = float(fm)
-                if fm_val > 0:
-                    fm_points.append(fm_val)
-                    stagioni_label.append(stagione)
-            except (TypeError, ValueError):
-                pass
+    """Costruisce il retro della card con le statistiche della stagione 2026/2027."""
+    df = stats_per_stagione.get("2026-27")
+    if df is None or df.empty or "Nome" not in df.columns:
+        return '<div style="padding:8px;color:#888;font-size:0.8em;text-align:center;">📭 Statistiche 2026/2027 non disponibili</div>'
 
-    # Mini grafico SVG andamento FM
-    chart_svg = ""
-    if len(fm_points) >= 2:
-        w, h = 280, 80
-        pad = 10
-        max_fm = max(fm_points + [8.0])
-        min_fm = min(fm_points + [4.0])
-        rng = max_fm - min_fm if max_fm != min_fm else 1
-        n = len(fm_points)
-        pts = []
-        for i, val in enumerate(fm_points):
-            x = pad + (i / (n - 1)) * (w - 2 * pad)
-            y = h - pad - ((val - min_fm) / rng) * (h - 2 * pad)
-            pts.append(f"{x:.1f},{y:.1f}")
-        polyline = " ".join(pts)
-        circles = ""
-        for i, val in enumerate(fm_points):
-            x = pad + (i / (n - 1)) * (w - 2 * pad)
-            y = h - pad - ((val - min_fm) / rng) * (h - 2 * pad)
-            circles += f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="#00d26a"/><text x="{x:.1f}" y="{y-6:.1f}" text-anchor="middle" fill="#ffd700" font-size="8">{val:.1f}</text>'
-        labels = ""
-        for i, lbl in enumerate(stagioni_label):
-            x = pad + (i / (n - 1)) * (w - 2 * pad)
-            labels += f'<text x="{x:.1f}" y="{h-2:.1f}" text-anchor="middle" fill="#888" font-size="7">{lbl}</text>'
-        chart_svg = f'<div style="margin:10px 0;"><svg width="{w}" height="{h}" style="background:#0f0f24;border-radius:6px;"><polyline points="{polyline}" fill="none" stroke="#00d26a" stroke-width="2"/>{circles}{labels}</svg></div>'
+    nomi = df["Nome"].fillna("").astype(str)
+    match = df[nomi.str.lower().str.strip() == nome.lower().strip()]
+    if match.empty:
+        close = difflib.get_close_matches(
+            nome.lower().strip(),
+            [n.lower().strip() for n in nomi if n.strip()],
+            n=1,
+            cutoff=0.8,
+        )
+        if close:
+            match = df[nomi.str.lower().str.strip() == close[0]]
 
-    if not rows:
-        return '<div style="padding:8px;color:#888;font-size:0.8em;text-align:center;">📭 Nessuno storico disponibile</div>'
-    return chart_svg + f'<table style="width:100%;border-collapse:collapse;margin-top:8px;"><thead><tr style="border-bottom:1px solid #2a2a4a;"><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">Stagione</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">FM</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">⚽</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">🅰️</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">🏃</th><th style="padding:4px 8px;color:#888;font-size:0.7em;text-align:left;">🎯</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
+    if match.empty:
+        return '<div style="padding:8px;color:#888;font-size:0.8em;text-align:center;">📭 Nessun dato 2026/2027 per questo calciatore</div>'
+
+    r = match.iloc[0]
+    gol_fatti = _stat_value(r, ["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti"])
+    gol_subiti = _stat_value(r, ["Gol subiti", "Goal subiti", "GS", "Reti subite"])
+    ammonizioni = _stat_value(r, ["Ammonizioni", "Cartellini gialli", "Gialli", "Amm"])
+    espulsioni = _stat_value(r, ["Espulsioni", "Cartellini rossi", "Rossi", "Esp"])
+    media_voto = _stat_value(r, ["Media Voto", "Media voto", "MV", "Voto medio"])
+    fantamedia = _stat_value(r, ["FantaMedia", "Fanta Media", "FM"])
+
+    stats = [
+        ("⚽", "Gol fatti", gol_fatti, "#00d26a"),
+        ("🥅", "Gol subiti", gol_subiti, "#ef4444"),
+        ("🟨", "Ammonizioni", ammonizioni, "#eab308"),
+        ("🟥", "Espulsioni", espulsioni, "#ef4444"),
+        ("⭐", "Media voto", media_voto, "#ffffff"),
+        ("💫", "Fantamedia", fantamedia, "#ffd700"),
+    ]
+    cards = "".join(
+        f'''<div style="background:rgba(255,255,255,0.045);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:7px 6px;text-align:center;min-width:0;">
+            <div style="font-size:0.72em;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{icon} {label}</div>
+            <div style="font-size:1.05em;font-weight:bold;color:{color};margin-top:2px;">{value}</div>
+        </div>'''
+        for icon, label, value, color in stats
+    )
+    return f'''<div style="font-size:0.72em;color:#888;margin-bottom:7px;">STAGIONE 2026/2027</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">{cards}</div>'''
 
 
 
@@ -3833,11 +3833,15 @@ if menu == "📈 Statistiche Storiche":
                         col_map[col] = 'Nome'
                     elif any(k in cl for k in ['stagione','anno','season','year']):
                         col_map[col] = 'Stagione'
+                    elif any(k in cl for k in ['gol subiti','goal subiti','reti subite']) or cl in ['gs']:
+                        col_map[col] = 'Gol_Subiti'
                     elif any(k in cl for k in ['gol','goal','reti']):
                         col_map[col] = 'Gol'
                     elif 'assist' in cl:
                         col_map[col] = 'Assist'
-                    elif any(k in cl for k in ['fm','fantamedia','fanta media','media']):
+                    elif any(k in cl for k in ['media voto','voto medio']) or cl in ['mv']:
+                        col_map[col] = 'Media_Voto'
+                    elif any(k in cl for k in ['fm','fantamedia','fanta media']):
                         col_map[col] = 'FantaMedia'
                     elif any(k in cl for k in ['partite','presenze','pg','match','played']):
                         col_map[col] = 'Partite'
