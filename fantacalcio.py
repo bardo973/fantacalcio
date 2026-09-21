@@ -1163,8 +1163,8 @@ def _build_stats_html(nome, stats_per_stagione):
         return '<div style="padding:8px;color:#888;font-size:0.8em;text-align:center;">📭 Nessun dato 2026/2027 per questo calciatore</div>'
 
     r = match.iloc[0]
-    gol_fatti = _stat_value(r, ["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti"])
-    gol_subiti = _stat_value(r, ["Gol subiti", "Goal subiti", "GS", "Reti subite"])
+    gol_fatti = _stat_value(r, ["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti", "GF", "I gF", "Reti fatte"])
+    gol_subiti = _stat_value(r, ["Gol subiti", "Goal subiti", "GS", "I GS", "Reti subite"])
     ammonizioni = _stat_value(r, ["Ammonizioni", "Cartellini gialli", "Gialli", "Amm"])
     espulsioni = _stat_value(r, ["Espulsioni", "Cartellini rossi", "Rossi", "Esp"])
     media_voto = _stat_value(r, ["Media Voto", "Media voto", "MV", "Voto medio"])
@@ -2451,6 +2451,11 @@ if menu == "🔍 Scouting & Database":
                                 if pd.isna(rdict.get("Indice_Titolarita")):
                                     rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_wl)
                                 st.markdown(render_flip_card(rdict, stats_ps_wl, stats_2627_wl), unsafe_allow_html=True)
+                                nome_wl = str(rdict.get("Nome", ""))
+                                if st.button("❌ Rimuovi", key=f"wl_rm_{ruolo}_{nome_wl}", help=f"Rimuovi {nome_wl} dalla watchlist", use_container_width=True):
+                                    st.session_state.watchlist = [g for g in st.session_state.watchlist if g != nome_wl]
+                                    save_state()
+                                    st.rerun()
                         else:
                             st.caption("Nessuno")
 
@@ -3833,9 +3838,9 @@ if menu == "📈 Statistiche Storiche":
                         col_map[col] = 'Nome'
                     elif any(k in cl for k in ['stagione','anno','season','year']):
                         col_map[col] = 'Stagione'
-                    elif any(k in cl for k in ['gol subiti','goal subiti','reti subite']) or cl in ['gs']:
+                    elif any(k in cl for k in ['gol subiti','goal subiti','reti subite']) or cl in ['gs','i gs','g s']:
                         col_map[col] = 'Gol_Subiti'
-                    elif any(k in cl for k in ['gol','goal','reti']):
+                    elif cl in ['gf','i gf','g f','gol fatti','goal fatti','reti fatte','gol fatto'] or any(k in cl for k in ['gol fatti','goal fatti','reti fatte','gol','goal','reti']):
                         col_map[col] = 'Gol'
                     elif 'assist' in cl:
                         col_map[col] = 'Assist'
