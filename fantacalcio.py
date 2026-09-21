@@ -2741,17 +2741,22 @@ if menu == "🔨 Asta Live":
                         if st.session_state.squadre[vincitore]["crediti"] >= prezzo_vincita:
                             StateManager.snapshot()
                             st.session_state.squadre[vincitore]["crediti"] -= prezzo_vincita
-                            scad_acq = ANNO_CORRENTE + CONTRATTO_ANNI
+                            scad_acq = datetime.now().year + CONTRATTO_ANNI
+                            mese_scad_acq = datetime.now().month
                             st.session_state.squadre[vincitore]["rosa"].append({
                                 "Nome": g_asta, "Ruolo": info["Ruolo"], "Squadra_SerieA": info["Squadra_SerieA"],
                                 "Quotazione": int(info["Quotazione"]), "FantaMedia": float(info["FantaMedia"]),
-                                "Costo_Acquisto": prezzo_vincita, "Scadenza_Anno": scad_acq
+                                "Costo_Acquisto": prezzo_vincita, "Scadenza_Anno": scad_acq,
+                                "Scadenza_Mese": mese_scad_acq
                             })
-                            st.session_state.contratti[g_asta] = {"squadra": vincitore, "scadenza_anno": scad_acq}
+                            st.session_state.contratti[g_asta] = {
+                                "squadra": vincitore, "scadenza_anno": scad_acq,
+                                "scadenza_mese": mese_scad_acq
+                            }
                             st.session_state.storico_mercato.insert(0, {
                                 "Data": datetime.now().strftime("%Y-%m-%d %H:%M"),
                                 "Operazione": "ASTA",
-                                "Dettagli": f"{vincitore} aggiudica {g_asta} ({info['Ruolo']}) per {prezzo_vincita}cr — Contratto fino al {scad_acq}"
+                                "Dettagli": f"{vincitore} aggiudica {g_asta} ({info['Ruolo']}) per {prezzo_vincita}cr — Contratto fino al {mese_scad_acq:02d}/{scad_acq}"
                             })
                             if "asta_giocatore_corrente" in st.session_state:
                                 del st.session_state["asta_giocatore_corrente"]
@@ -2903,21 +2908,26 @@ if menu == "🛒 Mercato":
                     if cred >= prezzo:
                         StateManager.snapshot()
                         st.session_state.squadre[sq]["crediti"] -= prezzo
-                        scad_acq = ANNO_CORRENTE + CONTRATTO_ANNI
+                        scad_acq = datetime.now().year + CONTRATTO_ANNI
+                        mese_scad_acq = datetime.now().month
                         st.session_state.squadre[sq]["rosa"].append({
                             "Nome": g_sel, "Ruolo": info["Ruolo"], "Squadra_SerieA": info["Squadra_SerieA"],
                             "Quotazione": int(info["Quotazione"]), "FantaMedia": float(info["FantaMedia"]),
-                            "Costo_Acquisto": prezzo, "Scadenza_Anno": scad_acq
+                            "Costo_Acquisto": prezzo, "Scadenza_Anno": scad_acq,
+                            "Scadenza_Mese": mese_scad_acq
                         })
-                        st.session_state.contratti[g_sel] = {"squadra": sq, "scadenza_anno": scad_acq}
+                        st.session_state.contratti[g_sel] = {
+                            "squadra": sq, "scadenza_anno": scad_acq,
+                            "scadenza_mese": mese_scad_acq
+                        }
                         st.session_state.storico_mercato.insert(0, {
                             "Data": datetime.now().strftime("%Y-%m-%d %H:%M"),
                             "Operazione": "ACQUISTO",
-                            "Dettagli": f"{sq} acquista {g_sel} ({info['Ruolo']}) per {prezzo}cr — Contratto fino al {scad_acq}"
+                            "Dettagli": f"{sq} acquista {g_sel} ({info['Ruolo']}) per {prezzo}cr — Contratto fino al {mese_scad_acq:02d}/{scad_acq}"
                         })
                         invalidate_cache()
                         save_state()
-                        st.success(f"✅ {g_sel} acquistato! Contratto 3 anni (fino al {ANNO_CORRENTE+CONTRATTO_ANNI}).")
+                        st.success(f"✅ {g_sel} acquistato! Contratto 3 anni (fino al {mese_scad_acq:02d}/{scad_acq}).")
                         st.rerun()
                     else:
                         st.error("Crediti insufficienti!")
@@ -3196,10 +3206,22 @@ if menu == "🤝 Scambi & Prestiti":
             if tipo == "Scambio Definitivo":
                 st.session_state.squadre[sq1]["rosa"].extend(oggetti2)
                 st.session_state.squadre[sq2]["rosa"].extend(oggetti1)
+                scad_scambio = datetime.now().year + CONTRATTO_ANNI
+                mese_scad_scambio = datetime.now().month
                 for g in oggetti2:
-                    st.session_state.contratti[g["Nome"]] = {"squadra": sq1, "scadenza_anno": ANNO_CORRENTE + CONTRATTO_ANNI}
+                    g["Scadenza_Anno"] = scad_scambio
+                    g["Scadenza_Mese"] = mese_scad_scambio
+                    st.session_state.contratti[g["Nome"]] = {
+                        "squadra": sq1, "scadenza_anno": scad_scambio,
+                        "scadenza_mese": mese_scad_scambio
+                    }
                 for g in oggetti1:
-                    st.session_state.contratti[g["Nome"]] = {"squadra": sq2, "scadenza_anno": ANNO_CORRENTE + CONTRATTO_ANNI}
+                    g["Scadenza_Anno"] = scad_scambio
+                    g["Scadenza_Mese"] = mese_scad_scambio
+                    st.session_state.contratti[g["Nome"]] = {
+                        "squadra": sq2, "scadenza_anno": scad_scambio,
+                        "scadenza_mese": mese_scad_scambio
+                    }
                 msg = f"Scambio definitivo: {sq1} ↔ {sq2}"
                 st.success(f"🎉 {msg}")
             else:
