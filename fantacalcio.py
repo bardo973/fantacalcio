@@ -11,7 +11,6 @@ from typing import Dict, List, Optional, Any, Tuple
 import io
 import random
 import hashlib
-import unicodedata
 
 # ============================================================
 # CONFIGURAZIONE
@@ -211,6 +210,164 @@ st.markdown("""
         box-shadow: 0 0 10px rgba(255,215,0,0.5);
         text-shadow: none;
     }
+
+    /* ====== 🎨 MIGLIORIE GRAFICHE 2026 ====== */
+
+    /* Sfondo animato con bagliori */
+    .stApp {
+        background:
+            radial-gradient(1200px 600px at 85% -10%, rgba(0,210,106,0.10), transparent 60%),
+            radial-gradient(900px 500px at -10% 110%, rgba(80,80,255,0.10), transparent 60%),
+            linear-gradient(180deg, #0b0f19 0%, #12122e 100%) !important;
+    }
+
+    /* Sidebar più elegante */
+    .stSidebar, section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f0f24 0%, #141433 100%) !important;
+        border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    section[data-testid="stSidebar"] .stMarkdown h1,
+    section[data-testid="stSidebar"] .stMarkdown h2,
+    section[data-testid="stSidebar"] .stMarkdown h3 { font-size: 1.05rem; }
+
+    /* Radio menu laterale a pillole */
+    section[data-testid="stSidebar"] div[role="radiogroup"] > label {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 10px;
+        padding: 6px 12px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] > label:hover {
+        background: rgba(0,210,106,0.12);
+        border-color: rgba(0,210,106,0.35);
+        transform: translateX(3px);
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] > label:has(input:checked) {
+        background: linear-gradient(90deg, rgba(0,210,106,0.25), rgba(0,168,84,0.10));
+        border-color: #00d26a;
+        box-shadow: 0 0 14px rgba(0,210,106,0.25);
+    }
+
+    /* Tab in stile pill */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(255,255,255,0.03);
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 6px 16px;
+        font-weight: 600;
+        color: #9aa0b5;
+        transition: all 0.2s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover { color: #e8ffeF; background: rgba(0,210,106,0.10); }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(90deg, #00d26a, #00a854) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(0,210,106,0.35);
+    }
+
+    /* Tabelle e dataframe */
+    div[data-testid="stDataFrame"], .stTable {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.07);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+
+    /* Expander stile card */
+    div[data-testid="stExpander"] {
+        background: rgba(30,30,63,0.55);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 12px;
+        backdrop-filter: blur(8px);
+        margin-bottom: 8px;
+    }
+    div[data-testid="stExpander"]:hover { border-color: rgba(0,210,106,0.35); }
+
+    /* Input, select e aree di testo */
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"],
+    .stTextArea textarea, .stDateInput input {
+        background: rgba(15,15,36,0.8) !important;
+        border: 1px solid rgba(255,255,255,0.10) !important;
+        border-radius: 10px !important;
+        color: #e8e8f0 !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stTextInput input:focus, .stNumberInput input:focus, .stTextArea textarea:focus {
+        border-color: #00d26a !important;
+        box-shadow: 0 0 0 2px rgba(0,210,106,0.25) !important;
+    }
+
+    /* Metriche con card luminosa */
+    div[data-testid="stMetric"] {
+        background: linear-gradient(145deg, rgba(30,30,63,0.85), rgba(20,20,45,0.85));
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 14px 18px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(0,210,106,0.18);
+        border-color: rgba(0,210,106,0.35);
+    }
+    div[data-testid="stMetricLabel"] { color: #9aa0b5 !important; font-weight: 600; }
+    div[data-testid="stMetricValue"] { color: #00d26a !important; }
+
+    /* Avvisi (info/success/warning/error) arrotondati */
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.10);
+        backdrop-filter: blur(6px);
+    }
+
+    /* Barre di avanzamento */
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, #00d26a, #7CFFB2) !important;
+        box-shadow: 0 0 12px rgba(0,210,106,0.5);
+    }
+
+    /* Divisori più morbidi */
+    hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(0,210,106,0.4), transparent); margin: 18px 0; }
+
+    /* Scrollbar personalizzata */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0f0f24; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #00d26a, #007744); border-radius: 8px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00e878; }
+
+    /* Titolo sezione riutilizzabile */
+    .fm-section-title {
+        font-size: 1.25rem; font-weight: 800; color: #e8ffef;
+        padding: 10px 16px; margin: 14px 0 10px 0;
+        background: linear-gradient(90deg, rgba(0,210,106,0.18), transparent);
+        border-left: 4px solid #00d26a; border-radius: 0 10px 10px 0;
+        letter-spacing: 0.3px;
+    }
+    /* Badge ruolo colorati */
+    .fm-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.5px; }
+    .fm-badge-P { background: rgba(255,176,32,0.18); color: #ffb020; border: 1px solid rgba(255,176,32,0.45); }
+    .fm-badge-D { background: rgba(46,144,255,0.16); color: #4ea1ff; border: 1px solid rgba(46,144,255,0.45); }
+    .fm-badge-C { background: rgba(0,210,106,0.16); color: #00d26a; border: 1px solid rgba(0,210,106,0.45); }
+    .fm-badge-A { background: rgba(255,77,109,0.16); color: #ff5c7a; border: 1px solid rgba(255,77,109,0.45); }
+
+    /* Titolo principale con gradiente */
+    .stApp h1 {
+        background: linear-gradient(90deg, #00d26a, #7CFFB2, #00d26a);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900 !important;
+        letter-spacing: 0.5px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -383,7 +540,6 @@ class StateManager:
             "contratti": st.session_state.contratti,
             "giocatori_db": st.session_state.giocatori_db,
             "stats_storiche": st.session_state.stats_storiche,
-            "stats_avanzate_raw": st.session_state.get("stats_avanzate_raw", pd.DataFrame()),
             "stats_per_stagione": st.session_state.get("stats_per_stagione", {}),
             "crediti_iniziali": st.session_state.get("crediti_iniziali", CREDITI_INIZIALI),
             "quotazioni_2025_26": st.session_state.quotazioni_2025_26,
@@ -439,7 +595,6 @@ class StateManager:
         if "Prezzo_Consigliato" not in st.session_state.giocatori_db.columns:
             st.session_state.giocatori_db["Prezzo_Consigliato"] = None
         st.session_state.stats_storiche = data.get("stats_storiche", pd.DataFrame())
-        st.session_state.stats_avanzate_raw = data.get("stats_avanzate_raw", pd.DataFrame())
         st.session_state.stats_per_stagione = data.get("stats_per_stagione", {})
         st.session_state.crediti_iniziali = data.get("crediti_iniziali", CREDITI_INIZIALI)
         st.session_state.quotazioni_2025_26 = data.get("quotazioni_2025_26", pd.DataFrame())
@@ -553,121 +708,6 @@ def get_db_info(nome):
         if not match.empty:
             return match.iloc[0].to_dict()
     return None
-
-# ============================================================
-# STATISTICHE AVANZATE — abbinamento per cognome
-# ============================================================
-def _norm_txt(s) -> str:
-    """Normalizza una stringa: minuscolo, senza accenti né punteggiatura."""
-    s = str(s).strip().lower()
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(c for c in s if not unicodedata.combining(c))
-    s = "".join(c if (c.isalnum() or c.isspace()) else " " for c in s)
-    return " ".join(s.split())
-
-
-def _rileva_colonna(df, keywords):
-    """Trova la prima colonna il cui nome normalizzato contiene una keyword."""
-    for col in df.columns:
-        cl = _norm_txt(col)
-        if any(k in cl for k in keywords):
-            return col
-    return None
-
-
-def abbina_statistiche_avanzate(df_stats, giocatori_db, col_nome=None, col_squadra=None, cutoff=0.72):
-    """Abbina le righe delle statistiche avanzate (nome + cognome) ai giocatori
-    del database (solo cognome), usando il cognome ed eventualmente la squadra.
-
-    Ritorna (mappa, report):
-      - mappa: dict {indice_riga_stats: nome_giocatore_db}
-      - report: dict con 'match', 'ambigui', 'non_trovati', 'col_nome', 'col_squadra'
-    """
-    if col_nome is None:
-        col_nome = _rileva_colonna(df_stats, ["nome", "giocatore", "calciatore", "player", "name", "cognome"])
-    if col_squadra is None:
-        col_squadra = _rileva_colonna(df_stats, ["squadra", "team", "club"])
-
-    db = giocatori_db.reset_index(drop=True)
-    giocatori = []
-    for _, g in db.iterrows():
-        giocatori.append({
-            "Nome": g["Nome"],
-            "norm": _norm_txt(g["Nome"]),
-            "squadra": _norm_txt(g.get("Squadra_SerieA", "")),
-        })
-
-    mappa = {}
-    match_list, ambigui, non_trovati = [], [], []
-
-    for i, row in df_stats.iterrows():
-        full = _norm_txt(row[col_nome]) if col_nome else ""
-        squad_stat = _norm_txt(row[col_squadra]) if col_squadra else ""
-        if not full:
-            continue
-        parole = full.split()
-        candidati = []
-        for g in giocatori:
-            cg = g["norm"]
-            if not cg:
-                continue
-            cg_parole = cg.split()
-            n = len(cg_parole)
-            if cg == full:
-                score = 1.0
-            elif full.endswith(" " + cg):
-                score = 0.97
-            elif all(p in parole for p in cg_parole):
-                score = 0.92
-            else:
-                coda = " ".join(parole[-n:]) if parole else ""
-                score = difflib.SequenceMatcher(None, cg, coda).ratio()
-            if score >= cutoff:
-                if squad_stat and g["squadra"] and squad_stat == g["squadra"]:
-                    score += 0.05
-                candidati.append((score, g["Nome"]))
-        if not candidati:
-            non_trovati.append((i, row[col_nome]))
-            continue
-        candidati.sort(key=lambda x: -x[0])
-        best = candidati[0][0]
-        migliori = [c for c in candidati if abs(c[0] - best) < 0.02]
-        if len(migliori) == 1:
-            mappa[i] = migliori[0][1]
-            match_list.append((i, row[col_nome], migliori[0][1]))
-        else:
-            ambigui.append((i, row[col_nome], [m[1] for m in migliori]))
-    return mappa, {
-        "match": match_list,
-        "ambigui": ambigui,
-        "non_trovati": non_trovati,
-        "col_nome": col_nome,
-        "col_squadra": col_squadra,
-    }
-
-
-def applica_statistiche_avanzate(df_stats, mappa, colonne_stat, prefisso="ADV_"):
-    """Aggiunge le colonne di statistiche avanzate al database giocatori,
-    abbinando ogni riga al giocatore indicato in `mappa` (indice -> Nome).
-    Ritorna il numero di giocatori aggiornati."""
-    db = st.session_state.giocatori_db.copy()
-    for c in colonne_stat:
-        col_target = prefisso + str(c)
-        if col_target not in db.columns:
-            db[col_target] = None
-    aggiornati = 0
-    for i_row, nome_g in mappa.items():
-        if i_row not in df_stats.index:
-            continue
-        r = df_stats.loc[i_row]
-        mask = db["Nome"] == nome_g
-        if not mask.any():
-            continue
-        for c in colonne_stat:
-            db.loc[mask, prefisso + str(c)] = r[c]
-        aggiornati += 1
-    st.session_state.giocatori_db = db
-    return aggiornati
 
 # ============================================================
 # BUSINESS LOGIC
@@ -1434,7 +1474,6 @@ if "initialized" not in st.session_state:
     if "Prezzo_Consigliato" not in st.session_state.giocatori_db.columns:
         st.session_state.giocatori_db["Prezzo_Consigliato"] = None
     st.session_state.stats_storiche = pd.DataFrame()
-    st.session_state.stats_avanzate_raw = pd.DataFrame()
     st.session_state.quotazioni_2025_26 = pd.DataFrame()
     st.session_state.stats_per_stagione = {}
     st.session_state.wizard_completato = False
@@ -1705,7 +1744,6 @@ menu = st.radio(
         "📋 Rose & Contratti",
         "🎯 Simulatore Rosa",
         "📈 Statistiche Storiche",
-        "⚡ Statistiche Avanzate",
         "⚙️ Importa & Esporta"
     ],
     horizontal=True,
@@ -4068,138 +4106,6 @@ if menu == "📈 Statistiche Storiche":
                 st.rerun()
         else:
             st.info("Nessuna stagione caricata.")
-
-# ============================================================
-# STATISTICHE AVANZATE (abbinamento per cognome)
-# ============================================================
-if menu == "⚡ Statistiche Avanzate":
-    st.header("⚡ Statistiche Avanzate — Abbinamento ai Giocatori")
-    st.markdown(
-        "Carica il file delle **statistiche avanzate** (dove i calciatori sono indicati con "
-        "**nome e cognome**). Il sistema abbina automaticamente ogni riga al giocatore del "
-        "tuo listone — che è salvato con il **solo cognome** — e aggiunge le statistiche "
-        "scelte a ciascun giocatore."
-    )
-
-    if "stats_avanzate_raw" not in st.session_state:
-        st.session_state.stats_avanzate_raw = pd.DataFrame()
-
-    up_adv = st.file_uploader("File statistiche avanzate", type=["csv", "xlsx"], key="up_adv_stats")
-    if up_adv is not None:
-        try:
-            if up_adv.name.endswith(".csv"):
-                df_adv = pd.read_csv(up_adv, encoding="utf-8", on_bad_lines="skip")
-            else:
-                df_adv = pd.read_excel(up_adv)
-            df_adv.columns = [str(c).strip() for c in df_adv.columns]
-            df_adv = df_adv.reset_index(drop=True)
-            st.session_state.stats_avanzate_raw = df_adv
-            st.success(f"✅ File caricato: {len(df_adv)} righe, {len(df_adv.columns)} colonne.")
-        except Exception as e:
-            st.error(f"Errore nella lettura del file: {e}")
-
-    df_adv = st.session_state.stats_avanzate_raw
-    if df_adv is not None and not df_adv.empty:
-        st.markdown("---")
-        st.subheader("1️⃣ Colonne del file")
-        colonne = list(df_adv.columns)
-        col_a, col_b = st.columns(2)
-        with col_a:
-            def_nome = _rileva_colonna(df_adv, ["nome", "giocatore", "calciatore", "player", "name", "cognome"])
-            idx_nome = colonne.index(def_nome) if def_nome in colonne else 0
-            col_nome = st.selectbox("Colonna con nome+cognome", colonne, index=idx_nome, key="adv_col_nome")
-        with col_b:
-            def_sq = _rileva_colonna(df_adv, ["squadra", "team", "club"])
-            opzioni_sq = ["(nessuna)"] + colonne
-            idx_sq = opzioni_sq.index(def_sq) if def_sq in opzioni_sq else 0
-            sel_sq = st.selectbox("Colonna squadra (per disambiguare)", opzioni_sq, index=idx_sq, key="adv_col_sq")
-            col_sq = None if sel_sq == "(nessuna)" else sel_sq
-
-        with st.expander("👁️ Anteprima file"):
-            st.dataframe(df_adv.head(20), use_container_width=True)
-
-        # --- Abbinamento ---
-        mappa, report = abbina_statistiche_avanzate(
-            df_adv, st.session_state.giocatori_db, col_nome=col_nome, col_squadra=col_sq
-        )
-
-        st.markdown("---")
-        st.subheader("2️⃣ Risultato abbinamento (per cognome)")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("✅ Abbinati", len(report["match"]))
-        m2.metric("❓ Ambigui", len(report["ambigui"]))
-        m3.metric("❌ Non trovati", len(report["non_trovati"]))
-
-        # Risoluzione ambigui
-        if report["ambigui"]:
-            st.markdown("**❓ Righe ambigue** — stesso cognome per più giocatori. Scegli quello giusto:")
-            for i_row, nome_file, opzioni in report["ambigui"]:
-                scelta = st.selectbox(
-                    f"'{nome_file}' →",
-                    ["(salta)"] + opzioni,
-                    key=f"adv_amb_{i_row}",
-                )
-                if scelta != "(salta)":
-                    mappa[i_row] = scelta
-
-        if report["non_trovati"]:
-            with st.expander(f"❌ {len(report['non_trovati'])} righe senza corrispondenza"):
-                st.write([n for _, n in report["non_trovati"]])
-                st.caption("Questi calciatori non sono nel listone o hanno un cognome troppo diverso: verranno ignorati.")
-
-        # --- Selezione colonne statistiche ---
-        st.markdown("---")
-        st.subheader("3️⃣ Statistiche da aggiungere ai giocatori")
-        escluse = {col_nome}
-        if col_sq:
-            escluse.add(col_sq)
-        colonne_stat_disp = [c for c in colonne if c not in escluse]
-        default_stat = [
-            c for c in colonne_stat_disp
-            if pd.api.types.is_numeric_dtype(df_adv[c])
-        ] or colonne_stat_disp
-        colonne_scelte = st.multiselect(
-            "Colonne da agganciare", colonne_stat_disp, default=default_stat, key="adv_cols_scelte"
-        )
-        prefisso = st.text_input("Prefisso colonne aggiunte", value="ADV_", key="adv_prefisso").strip() or "ADV_"
-
-        st.markdown("---")
-        if st.button("🔗 Abbina e aggiungi ai giocatori", type="primary", use_container_width=True):
-            if not colonne_scelte:
-                st.warning("Seleziona almeno una colonna di statistiche da aggiungere.")
-            elif not mappa:
-                st.warning("Nessun giocatore abbinato: controlla la colonna del nome o i dati.")
-            else:
-                try:
-                    StateManager.snapshot()
-                except Exception:
-                    pass
-                aggiornati = applica_statistiche_avanzate(df_adv, mappa, colonne_scelte, prefisso=prefisso)
-                save_state()
-                invalidate_cache()
-                st.success(f"✅ Statistiche avanzate aggiunte a **{aggiornati}** giocatori "
-                           f"({len(colonne_scelte)} colonne, prefisso '{prefisso}').")
-
-        # --- Vista colonne avanzate già presenti ---
-        db = st.session_state.giocatori_db
-        adv_cols = [c for c in db.columns if str(c).startswith(prefisso)]
-        if adv_cols:
-            st.markdown("---")
-            st.subheader("📊 Statistiche avanzate presenti nel listone")
-            vista = db[["Nome", "Ruolo", "Squadra_SerieA"] + adv_cols]
-            vista = vista[vista[adv_cols].notna().any(axis=1)]
-            st.dataframe(vista, use_container_width=True)
-            if st.button("🗑️ Rimuovi tutte le colonne avanzate", key="adv_reset"):
-                try:
-                    StateManager.snapshot()
-                except Exception:
-                    pass
-                st.session_state.giocatori_db = db.drop(columns=adv_cols)
-                save_state()
-                st.success("Colonne avanzate rimosse dal listone.")
-                st.rerun()
-    else:
-        st.info("Carica un file per iniziare l'abbinamento delle statistiche avanzate.")
 
 # ============================================================
 # 7. IMPORTA & ESPORTA
