@@ -2355,6 +2355,7 @@ if menu == "🏠 Dashboard":
 if menu == "🔍 Scouting & Database":
     st.header("🔍 Hub Scouting 2026/27")
     df = st.session_state.giocatori_db.copy()
+    df = migra_db_consigli(df)
     df = arricchisci_con_stats_2627(df)
     stats_2627 = None
     if "2026-27" in st.session_state.get("stats_per_stagione", {}):
@@ -2571,7 +2572,7 @@ if menu == "🔍 Scouting & Database":
                     st.metric("FantaMedia", estr['FantaMedia'])
                 with c_e3:
                     st.metric("Quotazione", f"{int(estr['Quotazione'])}cr")
-                st.caption(f"{estr.get('Squadra_SerieA', 'N/D')} | Fascia: {estr.get('Consiglio', 'N/D')} | IA: {estr.get('Indice_Affare', 'N/D')}")
+                st.caption(f"{estr.get('Squadra_SerieA', 'N/D')} | Fascia: {CONSIGLIO_LABEL.get(estr.get('Consiglio', ''), estr.get('Consiglio', 'N/D'))} | IA: {estr.get('Indice_Affare', 'N/D')}")
                 if st.button("🗑️ Chiudi estrazione"):
                     del st.session_state["rand_estratto"]
                     st.rerun()
@@ -2582,7 +2583,10 @@ if menu == "🔍 Scouting & Database":
             display_cols = [c for c in ["Nome", "Ruolo", "Squadra_SerieA", "Quotazione", "Prezzo_Consigliato",
                                         "Quotazione_2025_26", "Variazione_%", "FantaMedia", "Indice_Affare",
                                         "Indice_Titolarita", "Proprietario", "Consiglio", "Note"] if c in df_f.columns]
-            st.dataframe(df_f[display_cols].sort_values("Indice_Titolarita", ascending=False),
+            df_show = df_f[display_cols].sort_values("Indice_Titolarita", ascending=False).copy()
+            if "Consiglio" in df_show.columns:
+                df_show["Consiglio"] = df_show["Consiglio"].map(lambda x: CONSIGLIO_LABEL.get(x, x))
+            st.dataframe(df_show,
                          use_container_width=True, hide_index=True)
 
             # ============================================================
