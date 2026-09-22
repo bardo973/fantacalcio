@@ -1255,11 +1255,32 @@ def suggerisci_giocatori(ruolo: str, fascia: str, budget_max: int = None, n: int
 # CLASSIFICAZIONE FASCE AUTOMATICA DA STATISTICHE STORICHE
 # ============================================================
 
-def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = "C") -> str:
+def _fascia_migliore(a: str, b: str) -> str:
+    """Ritorna la fascia piu' pregiata tra due (indice piu' basso in CONSIGLIO_ORDINE)."""
+    try:
+        ia = CONSIGLIO_ORDINE.index(a)
+    except ValueError:
+        ia = len(CONSIGLIO_ORDINE)
+    try:
+        ib = CONSIGLIO_ORDINE.index(b)
+    except ValueError:
+        ib = len(CONSIGLIO_ORDINE)
+    return a if ia <= ib else b
+
+
+def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = "C",
+                              quotazione=None, consiglio_attuale=None) -> str:
     """
-    Classifica un giocatore in 'top', 'consigliato' o 'scommessa'
-    basandosi sulle stagioni disponibili in stats_per_stagione.
+    Classifica un giocatore in una delle 5 fasce combinando il segnale di mercato
+    (Quotazione) con il rendimento storico. La Quotazione fa da base: lo storico
+    puo' solo promuovere un giocatore, mai retrocederlo sotto la sua fascia di
+    mercato. Le scommesse curate a mano vengono preservate.
     """
+    # Preserva le scommesse taggate manualmente
+    if consiglio_attuale == "scommessa":
+        return "scommessa"
+
+    quota_tier = classifica_consiglio(ruolo, quotazione if quotazione is not None else 0)
     storico = []
     for stagione, df in stats_per_stagione.items():
         if df.empty or "Nome" not in df.columns:
@@ -1279,7 +1300,7 @@ def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = 
             storico.append(row)
 
     if not storico:
-        return "seconda_fascia"
+        return quota_tier
 
     def safe_float(val, default=0.0):
         try:
@@ -1299,7 +1320,7 @@ def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = 
     ast_list = [safe_int(r.get("Assist")) for r in storico]
 
     if not fm_list:
-        return "seconda_fascia"
+        return quota_tier
 
     fm_media = sum(fm_list) / len(fm_list)
     pres_media = sum(pres_list) / len(pres_list) if pres_list else 0
@@ -1366,15 +1387,38 @@ def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = 
             punteggio += 5
 
     if punteggio >= 75:
-        return "top_player"
+        storico_tier = "top_player"
     elif punteggio >= 58:
-        return "prima_fascia"
+        storico_tier = "prima_fascia"
     elif punteggio >= 42:
-        return "seconda_fascia"
-    elif punteggio >= 25:
-        return "titolare"
+        storico_tier = "seconda_fascia"
     else:
-        return "scommessa"
+        storico_tier = "titolare"
+
+    # La Quotazione (mercato) fa da base: prendi la fascia migliore tra le due.
+    return _fascia_migliore(quota_tier, storico_tier)
+
+
+def applica_fasce_da_quotazione(preserva_scommesse: bool = True):
+    """Riclassifica TUTTE le fasce in base alla sola Quotazione (segnale di mercato).
+    Utile per correggere fasce sbagliate senza bisogno dello storico.
+    Con preserva_scommesse=True le scommesse curate a mano restano invariate."""
+    db = st.session_state.giocatori_db.copy()
+    conteggi = {"top_player": 0, "prima_fascia": 0, "seconda_fascia": 0, "titolare": 0, "scommessa": 0}
+    for idx, row in db.iterrows():
+        attuale = row.get("Consiglio")
+        if preserva_scommesse and attuale == "scommessa":
+            nuova_fascia = "scommessa"
+        else:
+            nuova_fascia = classifica_consiglio(row.get("Ruolo", "C"), row.get("Quotazione", 0))
+        db.at[idx, "Consiglio"] = nuova_fascia
+        conteggi[nuova_fascia] = conteggi.get(nuova_fascia, 0) + 1
+    st.session_state.giocatori_db = db
+    save_state()
+    st.success(
+        f"✅ Fasce ricalcolate dalla Quotazione!  "
+        + " | ".join(f"{CONSIGLIO_LABEL[k]}: {conteggi[k]}" for k in CONSIGLIO_ORDINE)
+    )
 
 
 def applica_fasce_automatiche():
@@ -1387,7 +1431,11 @@ def applica_fasce_automatiche():
     for idx, row in db.iterrows():
         nome = row.get("Nome", "")
         ruolo = row.get("Ruolo", "C")
-        nuova_fascia = calcola_fascia_da_storico(nome, stats, ruolo)
+        nuova_fascia = calcola_fascia_da_storico(
+            nome, stats, ruolo,
+            quotazione=row.get("Quotazione"),
+            consiglio_attuale=row.get("Consiglio"),
+        )
         db.at[idx, "Consiglio"] = nuova_fascia
         conteggi[nuova_fascia] = conteggi.get(nuova_fascia, 0) + 1
     st.session_state.giocatori_db = db
@@ -2775,11 +2823,18 @@ if menu == "🔍 Scouting & Database":
                 st.rerun()
 
             st.markdown("---")
-            st.subheader("🎯 Ricalcola Fasce da Storico")
-            st.caption("Sovrascrive le fasce attuali analizzando le statistiche caricate nelle ultime stagioni.")
-            if st.button("🚀 Applica Classificazione Automatica", type="primary"):
-                applica_fasce_automatiche()
-                st.rerun()
+            st.subheader("🎯 Ricalcola Fasce")
+            st.caption("Dalla Quotazione = usa solo il prezzo di mercato (veloce, non serve lo storico). Da Storico = combina prezzo di mercato e rendimento delle stagioni caricate.")
+            preserva_sc = st.checkbox("Mantieni le scommesse curate a mano", value=True, key="preserva_scommesse")
+            c_fasce1, c_fasce2 = st.columns(2)
+            with c_fasce1:
+                if st.button("💰 Ricalcola dalla Quotazione", use_container_width=True):
+                    applica_fasce_da_quotazione(preserva_sc)
+                    st.rerun()
+            with c_fasce2:
+                if st.button("🚀 Ricalcola da Storico", type="primary", use_container_width=True):
+                    applica_fasce_automatiche()
+                    st.rerun()
 
         with st.expander("⭐ Watchlist", expanded=True):
             st.subheader("⭐ Watchlist")
