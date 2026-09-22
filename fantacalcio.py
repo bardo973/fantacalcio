@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Any, Tuple
 import io
 import random
 import hashlib
+import html
 
 # ============================================================
 # CONFIGURAZIONE
@@ -456,8 +457,95 @@ LISTONE_DEFAULT = [
     {"Nome":"Ratkov","Ruolo":"A","Squadra_SerieA":"Lazio","Quotazione":20,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"Gattuso lo rilancia, puntatina senza esagerare", "Quotazione_2025_26":8, "Prezzo_Consigliato":None},
 ]
 
+# ============================================================
+# FASCE CONSIGLIO — 5 livelli (sostituisce top/consigliato/scommessa)
+# ============================================================
+# Ordine dalla piu' pregiata alla piu' speculativa
+CONSIGLIO_ORDINE = ["top_player", "prima_fascia", "seconda_fascia", "titolare", "scommessa"]
+
+CONSIGLIO_LABEL = {
+    "top_player": "\U0001F451 Top Player",
+    "prima_fascia": "\U0001F947 Prima Fascia",
+    "seconda_fascia": "\U0001F948 Seconda Fascia",
+    "titolare": "\U0001F6E1\uFE0F Titolare",
+    "scommessa": "\U0001F3B2 Scommessa",
+}
+
+CONSIGLIO_BADGE = {
+    "top_player": "\U0001F451 TOP PLAYER",
+    "prima_fascia": "\U0001F947 PRIMA FASCIA",
+    "seconda_fascia": "\U0001F948 SECONDA FASCIA",
+    "titolare": "\U0001F6E1\uFE0F TITOLARE",
+    "scommessa": "\U0001F3B2 SCOMMESSA",
+}
+
+CONSIGLIO_COLORE = {
+    "top_player": "#ffd166",
+    "prima_fascia": "#c084fc",
+    "seconda_fascia": "#38bdf8",
+    "titolare": "#4ade80",
+    "scommessa": "#fb7185",
+}
+
+# Moltiplicatore prezzo per fascia
+CONSIGLIO_FATTORE = {
+    "top_player": 1.20, "prima_fascia": 1.12, "seconda_fascia": 1.00,
+    "titolare": 0.92, "scommessa": 0.85,
+}
+
+# Bonus indice titolarita' per fascia (0-25+)
+CONSIGLIO_BONUS = {
+    "top_player": 28, "prima_fascia": 22, "seconda_fascia": 15,
+    "titolare": 10, "scommessa": 5,
+}
+
+# Soglie di Quotazione per ruolo -> (top_player, prima_fascia, seconda_fascia); sotto = titolare
+SOGLIE_CONSIGLIO_RUOLO = {
+    "P": (33, 27, 20),
+    "D": (33, 26, 20),
+    "C": (46, 38, 28),
+    "A": (66, 50, 36),
+}
+
+def classifica_consiglio(ruolo, quotazione, consiglio_legacy=None):
+    """Assegna una delle 5 fasce consiglio in base a ruolo + Quotazione.
+    Le scommesse curate manualmente restano scommesse."""
+    if consiglio_legacy in ("scommessa", "scommesse"):
+        return "scommessa"
+    try:
+        q = float(quotazione)
+    except (TypeError, ValueError):
+        q = 0.0
+    top_s, prima_s, sec_s = SOGLIE_CONSIGLIO_RUOLO.get(ruolo, SOGLIE_CONSIGLIO_RUOLO["C"])
+    if q >= top_s:
+        return "top_player"
+    if q >= prima_s:
+        return "prima_fascia"
+    if q >= sec_s:
+        return "seconda_fascia"
+    return "titolare"
+
+def migra_consiglio_valore(ruolo, quotazione, consiglio):
+    """Converte un valore Consiglio legacy (top/consigliato/scommessa) nel nuovo
+    schema a 5 fasce. Valori gia' nel nuovo schema restano invariati."""
+    if consiglio in CONSIGLIO_ORDINE:
+        return consiglio
+    return classifica_consiglio(ruolo, quotazione, consiglio)
+
+def migra_db_consigli(db):
+    """Applica la migrazione delle fasce a un intero DataFrame giocatori."""
+    if db is None or getattr(db, "empty", True) or "Consiglio" not in db.columns:
+        return db
+    db = db.copy()
+    db["Consiglio"] = db.apply(
+        lambda r: migra_consiglio_valore(r.get("Ruolo", "C"), r.get("Quotazione", 0), r.get("Consiglio")),
+        axis=1,
+    )
+    return db
+
 for g in LISTONE_DEFAULT:
     g.setdefault("Prezzo_Consigliato", None)
+    g["Consiglio"] = migra_consiglio_valore(g.get("Ruolo", "C"), g.get("Quotazione", 0), g.get("Consiglio"))
 
 
 # ============================================================
@@ -520,6 +608,7 @@ class StateManager:
         st.session_state.prestiti = snap["prestiti"]
         st.session_state.contratti = snap["contratti"]
         st.session_state.giocatori_db = snap["giocatori_db"]
+        st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
         st.session_state.stats_storiche = snap["stats_storiche"]
         st.session_state.stats_per_stagione = snap["stats_per_stagione"]
         st.session_state.crediti_iniziali = snap["crediti_iniziali"]
@@ -594,6 +683,7 @@ class StateManager:
         st.session_state.giocatori_db = data.get("giocatori_db", pd.DataFrame(LISTONE_DEFAULT))
         if "Prezzo_Consigliato" not in st.session_state.giocatori_db.columns:
             st.session_state.giocatori_db["Prezzo_Consigliato"] = None
+        st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
         st.session_state.stats_storiche = data.get("stats_storiche", pd.DataFrame())
         st.session_state.stats_per_stagione = data.get("stats_per_stagione", {})
         st.session_state.crediti_iniziali = data.get("crediti_iniziali", CREDITI_INIZIALI)
@@ -717,14 +807,15 @@ def calcola_prezzo_consigliato(g_info, stats_df=None):
     ruolo = g_info.get("Ruolo", "C")
     quot = float(g_info.get("Quotazione", 10))
     fm = float(g_info.get("FantaMedia", 6.0))
-    fascia = g_info.get("Consiglio", "consigliato")
+    fascia = g_info.get("Consiglio", "seconda_fascia")
 
     base = quot
     medie_ruolo = {"P": 5.5, "D": 6.2, "C": 6.8, "A": 7.5}
     media_rif = medie_ruolo.get(ruolo, 6.5)
     delta_fm = fm - media_rif
     fattore_fm = 1 + (delta_fm * 0.15)
-    fattore_fascia = {"top": 1.15, "consigliato": 1.0, "scommessa": 0.85}.get(fascia, 1.0)
+    fascia = migra_consiglio_valore(ruolo, quot, fascia)
+    fattore_fascia = CONSIGLIO_FATTORE.get(fascia, 1.0)
 
     db = st.session_state.giocatori_db
     svinc = get_svincolati(db)
@@ -781,7 +872,7 @@ def calcola_prezzo_consigliato(g_info, stats_df=None):
     spiegazione = (
         f"**Base listone:** {int(base)}cr\n"
         f"**FantaMedia:** {fm} (media ruolo {ruolo}: {media_rif}) → fattore {fattore_fm:.2f}\n"
-        f"**Fascia:** {fascia} → fattore {fattore_fascia:.2f}\n"
+        f"**Fascia:** {CONSIGLIO_LABEL.get(fascia, fascia)} → fattore {fattore_fascia:.2f}\n"
         f"**Scarsità:** {rimasti}/{total_fascia} rimasti → fattore {fattore_scarsita:.2f}\n"
         f"**Indice affare:** {indice_affare:.3f} → fattore {fattore_affare:.2f}\n"
     )
@@ -924,7 +1015,7 @@ def arricchisci_con_stats_2627(df_listone):
 def calcola_indice_titolarita(row, stats_2627=None):
     """Calcola un indice 0-100 di titolarità/solidità del giocatore."""
     fm = float(row.get("FantaMedia", 6.0))
-    fascia = row.get("Consiglio", "consigliato")
+    fascia = row.get("Consiglio", "seconda_fascia")
     quot = float(row.get("Quotazione", 10))
     nome = str(row.get("Nome", ""))
 
@@ -932,7 +1023,8 @@ def calcola_indice_titolarita(row, stats_2627=None):
     base = min(50, (fm / 10) * 50)
 
     # Bonus fascia (0-25 punti)
-    bonus_fascia = {"top": 25, "consigliato": 15, "scommessa": 5}.get(fascia, 10)
+    fascia = migra_consiglio_valore(row.get("Ruolo", "C"), quot, fascia)
+    bonus_fascia = CONSIGLIO_BONUS.get(fascia, 10)
 
     # Presenze da stats 2026/27 (0-25 punti)
     bonus_presenze = 12.5
@@ -1001,10 +1093,10 @@ def fuga_top_tracker():
     svinc = db[db["Proprietario"] == "Svincolato"]
     result = {}
     for ruolo in ["P", "D", "C", "A"]:
-        total_top = len(db[(db["Ruolo"] == ruolo) & (db["Consiglio"] == "top")])
-        rimasti_top = len(svinc[(svinc["Ruolo"] == ruolo) & (svinc["Consiglio"] == "top")])
-        total_cons = len(db[(db["Ruolo"] == ruolo) & (db["Consiglio"] == "consigliato")])
-        rimasti_cons = len(svinc[(svinc["Ruolo"] == ruolo) & (svinc["Consiglio"] == "consigliato")])
+        total_top = len(db[(db["Ruolo"] == ruolo) & (db["Consiglio"] == "top_player")])
+        rimasti_top = len(svinc[(svinc["Ruolo"] == ruolo) & (svinc["Consiglio"] == "top_player")])
+        total_cons = len(db[(db["Ruolo"] == ruolo) & (db["Consiglio"].isin(["prima_fascia", "seconda_fascia"]))])
+        rimasti_cons = len(svinc[(svinc["Ruolo"] == ruolo) & (svinc["Consiglio"].isin(["prima_fascia", "seconda_fascia"]))])
         result[ruolo] = {
             "top_totali": total_top, "top_rimasti": rimasti_top,
             "cons_totali": total_cons, "cons_rimasti": rimasti_cons,
@@ -1187,7 +1279,7 @@ def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = 
             storico.append(row)
 
     if not storico:
-        return "consigliato"
+        return "seconda_fascia"
 
     def safe_float(val, default=0.0):
         try:
@@ -1207,7 +1299,7 @@ def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = 
     ast_list = [safe_int(r.get("Assist")) for r in storico]
 
     if not fm_list:
-        return "consigliato"
+        return "seconda_fascia"
 
     fm_media = sum(fm_list) / len(fm_list)
     pres_media = sum(pres_list) / len(pres_list) if pres_list else 0
@@ -1273,10 +1365,14 @@ def calcola_fascia_da_storico(nome: str, stats_per_stagione: dict, ruolo: str = 
         elif pres_ultima >= 20:
             punteggio += 5
 
-    if punteggio >= 70:
-        return "top"
+    if punteggio >= 75:
+        return "top_player"
+    elif punteggio >= 58:
+        return "prima_fascia"
     elif punteggio >= 42:
-        return "consigliato"
+        return "seconda_fascia"
+    elif punteggio >= 25:
+        return "titolare"
     else:
         return "scommessa"
 
@@ -1287,7 +1383,7 @@ def applica_fasce_automatiche():
     if not stats:
         st.warning("⚠️ Nessuna statistica storica caricata. Vai su 📈 Statistiche Storiche e carica almeno una stagione.")
         return
-    conteggi = {"top": 0, "consigliato": 0, "scommessa": 0}
+    conteggi = {"top_player": 0, "prima_fascia": 0, "seconda_fascia": 0, "titolare": 0, "scommessa": 0}
     for idx, row in db.iterrows():
         nome = row.get("Nome", "")
         ruolo = row.get("Ruolo", "C")
@@ -1298,7 +1394,7 @@ def applica_fasce_automatiche():
     save_state()
     st.success(
         f"✅ Fasce ricalcolate da storico!  "
-        f"⭐ Top: {conteggi['top']} | 👍 Consigliati: {conteggi['consigliato']} | 🎲 Scommesse: {conteggi['scommessa']}"
+        + " | ".join(f"{CONSIGLIO_LABEL[k]}: {conteggi[k]}" for k in CONSIGLIO_ORDINE)
     )
 
 
@@ -1378,7 +1474,7 @@ def render_flip_card(row, stats_per_stagione=None, stats_2627=None):
     sa = row.get("Squadra_SerieA", "N/D") if hasattr(row, "get") else row.get("Squadra_SerieA", "N/D")
     fm = row.get("FantaMedia", 0) if hasattr(row, "get") else row.get("FantaMedia", 0)
     quot = int(row.get("Quotazione", 0)) if hasattr(row, "get") else int(row.get("Quotazione", 0))
-    fascia = row.get("Consiglio", "consigliato") if hasattr(row, "get") else row.get("Consiglio", "consigliato")
+    fascia = row.get("Consiglio", "seconda_fascia") if hasattr(row, "get") else row.get("Consiglio", "seconda_fascia")
     pc = row.get("Prezzo_Consigliato") if hasattr(row, "get") else row.get("Prezzo_Consigliato")
     pc_txt = f"💡 {int(pc)}cr" if pd.notna(pc) else ""
     idx_aff = row.get("Indice_Affare", 0) if hasattr(row, "get") else row.get("Indice_Affare", 0)
@@ -1391,7 +1487,8 @@ def render_flip_card(row, stats_per_stagione=None, stats_2627=None):
 
     colori_ruolo = {"P": "#3b82f6", "D": "#22c55e", "C": "#eab308", "A": "#ef4444"}
     colore = colori_ruolo.get(ruolo, "#888")
-    badge_fascia = {"top": "⭐ TOP", "consigliato": "👍 CONSIGLIATO", "scommessa": "🎲 SCOMMESSA"}.get(fascia, "")
+    fascia = migra_consiglio_valore(ruolo, quot, fascia)
+    badge_fascia = CONSIGLIO_BADGE.get(fascia, "")
     flame_badge = flame_indicator(nome, stats_per_stagione) if stats_per_stagione else ""
 
     # 💎 PREMIUM BADGE — giocatori con Prezzo_Consigliato AI > 40cr
@@ -1787,6 +1884,7 @@ with st.sidebar:
                     st.session_state.giocatori_db["Prezzo_Consigliato"] = pd.to_numeric(
                         st.session_state.giocatori_db["Prezzo_Consigliato"], errors="coerce"
                     )
+                st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
                 stats = data.get("stats_storiche", [])
                 st.session_state.stats_storiche = pd.DataFrame(stats) if stats else pd.DataFrame()
                 st.session_state.stats_per_stagione = {}
@@ -2304,7 +2402,7 @@ if menu == "🔍 Scouting & Database":
                     min_fm_s, max_fm_s = round(max(4.0, min_fm_s - 1.0), 1), round(min(10.0, max_fm_s + 1.0), 1)
                 range_fm = st.slider("FantaMedia", min_value=min_fm_s, max_value=max_fm_s, value=(min_fm_s, max_fm_s), step=0.1, key="scout_fm")
             with f5:
-                consigli_fasce = st.multiselect("Fascia", ["top", "consigliato", "scommessa"], default=["top", "consigliato", "scommessa"], key="scout_fascia")
+                consigli_fasce = st.multiselect("Fascia", CONSIGLIO_ORDINE, default=list(CONSIGLIO_ORDINE), format_func=lambda x: CONSIGLIO_LABEL.get(x, x), key="scout_fascia")
 
             f6, f7 = st.columns(2)
             with f6:
@@ -2328,7 +2426,7 @@ if menu == "🔍 Scouting & Database":
         # Normalizza tipi numerici
         df["FantaMedia"] = pd.to_numeric(df["FantaMedia"], errors="coerce")
         df["Quotazione"] = pd.to_numeric(df["Quotazione"], errors="coerce")
-        df["Consiglio"] = df["Consiglio"].fillna("consigliato")
+        df["Consiglio"] = df["Consiglio"].fillna("seconda_fascia")
 
         df_f = df[
             (df["Ruolo"].isin(filtro_ruolo)) &
@@ -3925,33 +4023,33 @@ if menu == "📋 Rose & Contratti":
 
     with tab_consigli:
         st.subheader("💡 Consigli Fantacalcio 2026/27")
-        consigli = {
-            "Portieri": {
-                "top": ["Svilar (Roma) - 18 clean sheet, FM 6.0", "Carnesecchi (Atalanta) - 13 CS, media 6.5", "Maignan (Milan) - 13 CS, 2 rigori parati", "Butez (Como) - 19 CS, miglior difesa"],
-                "consigliati": ["Martinez (Inter) - nuovo titolare, fiducia Chivu", "Meret (Napoli) - sottovalutato con Allegri", "De Gea (Fiorentina) - stagione del riscatto", "Vicario (Juve) - ex Empoli, top in Serie A", "Mandas (Lazio) - portiere da modificatore"],
-                "scommesse": ["Falcone (Lecce) - media voto 6.41, low cost", "Stankovic (Venezia) - torna in A", "Corvi (Parma) - nuovo titolare", "Caprile (Cagliari) - modificatore"]
-            },
-            "Difensori": {
-                "top": ["Dimarco (Inter) - top assoluto, +3 a giornata", "Bremer (Juve) - 4 gol, 3 assist, FM 6.9", "Bisseck (Inter) - voti alti e bonus", "Mancini (Roma) - 4 gol, leader difesa Gasperini", "Wesley (Roma) - 5 gol, potenziale alla Gosens"],
-                "consigliati": ["Pavlovic (Milan) - 5 gol, media 6.24", "Ostigard (Napoli) - 5 gol, centrale prolifico", "Cambiaso (Juve) - 3 gol, 4 assist", "Spinazzola (Roma) - sottovalutato, bonus garantiti", "Zappacosta (Atalanta) - gran gamba", "Di Lorenzo (Napoli) - 6-7 bonus potenziali", "Kempf (Como) - certezza voti e bonus"],
-                "scommesse": ["Rensch (Roma) - 1 gol, 4 assist in 19 partite", "Doekhi (Lazio) - 7 gol in Europa, sostituto Gila", "Jimenez (Fiorentina) - jolly tattico", "Kaiki (Como) - terzino di spinta", "Çelik (Juve) - duttile, Spalletti lo schiera"]
-            },
-            "Centrocampisti": {
-                "top": ["Pulisic (Milan) - cambio ruolo, doppia-doppia potenziale", "Orsolini (Bologna) - cambio ruolo, bonus garantiti", "McTominay (Napoli) - doppia cifra, sposta equilibri", "Nico Paz (Inter) - doppia cifra, top assoluto", "Calhanoglu (Inter) - 9 gol, media >6.5", "Rabiot (Milan) - 6 gol, 4 assist"],
-                "consigliati": ["Vlasic (Torino) - 8 gol, rigorista", "Frattesi (Lazio) - alla Milinkovic-Savic", "Zaniolo (Udinese) - 5 gol, 6 assist", "Modric (Inter) - rendimento garantito", "Koné (Juve) - mai sotto sufficienza", "De Bruyne (Juve) - calcia rigori", "Barella (Inter) - secondo slot ideale", "Bernardeschi (Bologna) - da prendere con Rowe", "Rowe (Bologna) - 3 gol, 3 assist", "Thorstvedt (Sassuolo) - 5-6 gol potenziali"],
-                "scommesse": ["Alajbegovic (Juve) - talentino trequarti", "Douglas Luiz (Juve) - può tornare ai livelli di 2 anni fa", "Gaetano (Atalanta) - Sarri lo vuole", "Stankovic A. (Inter) - fiducia Chivu", "Calò (Frosinone) - 10 gol, 14 assist in B", "Milla (Como) - solo Yamal più assist in Liga", "Liberali (Como) - giovane, spazio con Champions"]
-            },
-            "Attaccanti": {
-                "top": ["Lautaro (Inter) - capocannoniere 17 gol", "Malen (Roma) - vice-cannoniere 14 gol", "Thuram (Inter) - 13 gol, primo slot", "Hojlund (Napoli) - obiettivo 15 gol, Allegri punta forte", "Goncalo Ramos (Milan) - colpo 70M, titolare Amorim", "Kolo Muani (Juve) - Spalletti lo vuole", "Leao (Milan) - prima fascia, talento puro"],
-                "consigliati": ["Kean (Fiorentina) - doppia cifra garantita", "Yildiz (Juve) - 10 gol, centro progetto", "Douvikas (Como) - 14 gol, sorpresa 2024-25", "Dybala (Roma) - sempre utile, clutch", "Davis (Udinese) - 10 gol, rigorista", "Scamacca (Atalanta) - attenzione infortuni", "Simeone (Napoli) - 11 gol, conferma", "Dovbyk (Bologna) - doppia cifra", "Colombo (Roma) - 7 gol, obiettivo doppia cifra"],
-                "scommesse": ["Yeboah (Venezia) - doppia cifra in Serie B, convocato Mondiale", "Bowie (Sassuolo) - ex Verona, goal li sa fare", "Alajbegovic K. (Juve) - colpo di mercato", "Rrahmani (Venezia) - 15 gol in Rep. Ceca", "Ekhator (Juve) - low cost, potenziale", "Mendy (Cagliari) - 2 gol in 8 partite, 2007", "Camarda (Milan) - vice Ramos, a 1cr ci sta", "Ratkov (Lazio) - Gattuso lo rilancia"]
-            }
-        }
-        for ruolo, dati in consigli.items():
-            with st.expander(ruolo):
-                st.markdown("**⭐ Top:** " + " • ".join(dati["top"]))
-                st.markdown("**👍 Consigliati:** " + " • ".join(dati["consigliati"]))
-                st.markdown("**🎲 Scommesse:** " + " • ".join(dati["scommesse"]))
+        st.caption("Le fasce sono generate automaticamente dal listone (colonna Consiglio). Ricalcola le fasce da 📈 Statistiche Storiche o modificale a mano in ✏️ Gestione Listone.")
+        db_cons = st.session_state.giocatori_db.copy()
+        db_cons["Consiglio"] = db_cons.apply(
+            lambda r: migra_consiglio_valore(r.get("Ruolo", "C"), r.get("Quotazione", 10), r.get("Consiglio", "seconda_fascia")),
+            axis=1,
+        )
+        db_cons["_q"] = pd.to_numeric(db_cons["Quotazione"], errors="coerce").fillna(0)
+        ruoli_nomi = {"P": "Portieri", "D": "Difensori", "C": "Centrocampisti", "A": "Attaccanti"}
+        for ru, nome_ru in ruoli_nomi.items():
+            df_ru = db_cons[db_cons["Ruolo"] == ru]
+            if df_ru.empty:
+                continue
+            with st.expander(f"{nome_ru} ({len(df_ru)})"):
+                for fascia in CONSIGLIO_ORDINE:
+                    df_fa = df_ru[df_ru["Consiglio"] == fascia].sort_values("_q", ascending=False)
+                    if df_fa.empty:
+                        continue
+                    voci = []
+                    for _, g in df_fa.iterrows():
+                        sa = g.get("Squadra_SerieA", "")
+                        q = int(g["_q"])
+                        note = str(g.get("Note", "") or "").strip()
+                        txt = f"{g.get('Nome','')} ({sa}, {q}cr)"
+                        if note:
+                            txt += f" – {note}"
+                        voci.append(txt)
+                    st.markdown(f"**{CONSIGLIO_LABEL.get(fascia, fascia)}:** " + "  •  ".join(voci))
 
     with tab_formazione:
         st.subheader("🎮 Simula Formazione")
@@ -4417,6 +4515,7 @@ if menu == "⚙️ Importa & Esporta":
                         cols_final.append('Id')
 
                     st.session_state.giocatori_db = df_load[cols_final].copy()
+                    st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
 
                     # 🔄 Ricalcola indici e prezzi AI dopo import per le card 3D
                     db = st.session_state.giocatori_db
@@ -4787,7 +4886,7 @@ if menu == "🎯 Simulatore Rosa":
             # Pre-popola con righe vuote = posti mancanti
             default_rows = sim_data[ruolo] if sim_data[ruolo] else []
             while len(default_rows) < mancanti:
-                default_rows.append({"Nome": "", "Prezzo_Stimato": 1, "Fascia": "consigliato", "Note": ""})
+                default_rows.append({"Nome": "", "Prezzo_Stimato": 1, "Fascia": "seconda_fascia", "Note": ""})
 
             df_edit = pd.DataFrame(default_rows)
             edited = st.data_editor(
@@ -4795,7 +4894,7 @@ if menu == "🎯 Simulatore Rosa":
                 column_config={
                     "Nome": st.column_config.TextColumn("Giocatore", help="Nome del giocatore da acquistare"),
                     "Prezzo_Stimato": st.column_config.NumberColumn("Prezzo €", min_value=0, max_value=500, step=1, help="Quanto pensi di pagare"),
-                    "Fascia": st.column_config.SelectboxColumn("Fascia", options=["top", "consigliato", "scommessa"], help="Fascia di qualità prevista"),
+                    "Fascia": st.column_config.SelectboxColumn("Fascia", options=list(CONSIGLIO_ORDINE), help="Fascia di qualità prevista"),
                     "Note": st.column_config.TextColumn("Note", help="Es: 'Alternativa a X'"),
                 },
                 num_rows="dynamic",
@@ -4891,9 +4990,9 @@ if menu == "🎯 Simulatore Rosa":
     for ruolo in ["P", "D", "C", "A"]:
         df_r = pd.DataFrame(st.session_state.simulatore_rosa[sq_sim][ruolo])
         valid = df_r[df_r["Nome"].str.strip() != ""]
-        n_top = len(valid[valid["Fascia"] == "top"])
+        n_top = len(valid[valid["Fascia"] == "top_player"])
         if n_top >= 2:
-            suggerimenti.append(f"💡 **{ruolo}**: hai pianificato {n_top} top. Se il budget stringe, converti 1-2 in 'consigliato' per risparmiare ~10-15cr ciascuno.")
+            suggerimenti.append(f"💡 **{ruolo}**: hai pianificato {n_top} top player. Se il budget stringe, converti 1-2 in una fascia inferiore per risparmiare ~10-15cr ciascuno.")
 
     # 4. Budget libero eccessivo
     if crediti_rimanenti > 10:
