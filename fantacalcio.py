@@ -1023,6 +1023,142 @@ def alert_scarsita_top(ruolo):
 
 
 # ============================================================
+# FASCE DA PREZZO CONSIGLIATO + COMPLETAMENTO ROSA
+# ============================================================
+
+SOGLIE_FASCE = [(50, "top_player"), (40, "prima_fascia"), (30, "seconda_fascia"), (0, "low_cost")]
+
+LABEL_FASCE = {
+    "top_player": "👑 Top Player (>50cr)",
+    "prima_fascia": "🥇 Prima Fascia (>40cr)",
+    "seconda_fascia": "🥈 Seconda Fascia (>30cr)",
+    "low_cost": "💰 Low Cost (<30cr)",
+}
+
+COLORI_FASCE = {
+    "top_player": "#ffd166",
+    "prima_fascia": "#4ade80",
+    "seconda_fascia": "#38bdf8",
+    "low_cost": "#94a3b8",
+}
+
+# Struttura rosa ideale per fascia (somma = ROSA_REQ)
+TARGET_FASCE = {
+    "P": {"top_player": 0, "prima_fascia": 1, "seconda_fascia": 0, "low_cost": 2},
+    "D": {"top_player": 0, "prima_fascia": 1, "seconda_fascia": 2, "low_cost": 6},
+    "C": {"top_player": 1, "prima_fascia": 2, "seconda_fascia": 2, "low_cost": 4},
+    "A": {"top_player": 2, "prima_fascia": 1, "seconda_fascia": 1, "low_cost": 3},
+}
+
+
+def fascia_da_prezzo(prezzo) -> str:
+    """Classifica un giocatore in base al prezzo consigliato."""
+    try:
+        v = float(prezzo)
+    except (TypeError, ValueError):
+        return "low_cost"
+    for soglia, nome in SOGLIE_FASCE:
+        if v > soglia:
+            return nome
+    return "low_cost"
+
+
+def prezzo_consigliato_di(g_info) -> int:
+    """Prezzo consigliato: usa la colonna se presente, altrimenti lo calcola."""
+    if not isinstance(g_info, dict):
+        try:
+            g_info = dict(g_info)
+        except Exception:
+            return 1
+    pc = g_info.get("Prezzo_Consigliato")
+    try:
+        if pc is not None and not pd.isna(pc) and float(pc) > 0:
+            return int(round(float(pc)))
+    except Exception:
+        pass
+    try:
+        prezzo, _ = calcola_prezzo_consigliato(g_info)
+        return int(prezzo)
+    except Exception:
+        try:
+            return int(float(g_info.get("Quotazione", 1)))
+        except Exception:
+            return 1
+
+
+def fascia_di(g_info) -> str:
+    return fascia_da_prezzo(prezzo_consigliato_di(g_info))
+
+
+def analizza_completamento_rosa(squadra_nome: str) -> dict:
+    """Confronta la rosa attuale con la struttura ideale per fascia di prezzo."""
+    rosa = st.session_state.squadre[squadra_nome]["rosa"]
+    crediti = st.session_state.squadre[squadra_nome]["crediti"]
+
+    out = {"ruoli": {}, "crediti": crediti, "tot_mancanti": 0, "tot_budget_richiesto": 0}
+
+    for ruolo, req in ROSA_REQ.items():
+        in_rosa = [g for g in rosa if g.get("Ruolo", "C") == ruolo]
+        conta = {k: 0 for k in COLORI_FASCE}
+        for g in in_rosa:
+            info = get_db_info(g.get("Nome", "")) or g
+            conta[fascia_di(info)] += 1
+
+        target = TARGET_FASCE.get(ruolo, {})
+        deficit = {}
+        for f in ["top_player", "prima_fascia", "seconda_fascia", "low_cost"]:
+            deficit[f] = max(0, target.get(f, 0) - conta.get(f, 0))
+
+        mancanti = max(0, req - len(in_rosa))
+        # non chiedere piu' slot di quelli realmente liberi (dal piu' costoso)
+        residuo = mancanti
+        deficit_effettivo = {}
+        for f in ["top_player", "prima_fascia", "seconda_fascia", "low_cost"]:
+            n = min(deficit[f], residuo)
+            deficit_effettivo[f] = n
+            residuo -= n
+        if residuo > 0:
+            deficit_effettivo["low_cost"] += residuo
+
+        costo_min = {"top_player": 55, "prima_fascia": 45, "seconda_fascia": 33, "low_cost": 8}
+        budget_ric = sum(deficit_effettivo[f] * costo_min[f] for f in deficit_effettivo)
+
+        out["ruoli"][ruolo] = {
+            "req": req,
+            "posseduti": len(in_rosa),
+            "mancanti": mancanti,
+            "per_fascia": conta,
+            "target": target,
+            "deficit": deficit_effettivo,
+            "budget_richiesto": budget_ric,
+        }
+        out["tot_mancanti"] += mancanti
+        out["tot_budget_richiesto"] += budget_ric
+
+    return out
+
+
+def suggerisci_giocatori(ruolo: str, fascia: str, budget_max: int = None, n: int = 8) -> pd.DataFrame:
+    """Svincolati del ruolo nella fascia richiesta, ordinati per convenienza."""
+    db = st.session_state.giocatori_db
+    svinc = get_svincolati(db)
+    svinc = svinc[svinc["Ruolo"] == ruolo].copy()
+    if svinc.empty:
+        return svinc
+    svinc["Prezzo_Cons"] = svinc.apply(lambda r: prezzo_consigliato_di(r.to_dict()), axis=1)
+    svinc["Fascia"] = svinc["Prezzo_Cons"].apply(fascia_da_prezzo)
+    svinc = svinc[svinc["Fascia"] == fascia]
+    if budget_max is not None:
+        svinc = svinc[svinc["Prezzo_Cons"] <= budget_max]
+    if svinc.empty:
+        return svinc
+    svinc["Valore"] = svinc["FantaMedia"].astype(float) / svinc["Prezzo_Cons"].clip(lower=1) * 100
+    svinc = svinc.sort_values(["FantaMedia", "Valore"], ascending=[False, False])
+    return svinc.head(n)
+
+
+
+# ============================================================
 # ============================================================
 # CLASSIFICAZIONE FASCE AUTOMATICA DA STATISTICHE STORICHE
 # ============================================================
@@ -1743,6 +1879,7 @@ menu = st.radio(
         "🤝 Scambi & Prestiti",
         "📋 Rose & Contratti",
         "🎯 Simulatore Rosa",
+        "🧩 Completa Rosa",
         "📈 Statistiche Storiche",
         "⚙️ Importa & Esporta"
     ],
@@ -4914,3 +5051,94 @@ if menu == "🎯 Simulatore Rosa":
                 st.caption("❌ Disabilitato: deficit budget")
             elif not all(conti_sim[r] >= ROSA_REQ[r] for r in ROSA_REQ):
                 st.caption("❌ Disabilitato: rosa incompleta")
+
+
+# ============================================================
+# 9. COMPLETA ROSA — CHI MI SERVE PER FASCIA DI PREZZO
+# ============================================================
+elif menu == "🧩 Completa Rosa":
+    st.header("🧩 Completa Rosa")
+    st.caption("Fasce in base al prezzo consigliato: >50 Top Player · >40 Prima Fascia · >30 Seconda Fascia · sotto 30 Low Cost")
+
+    squadre_list = get_nomi_squadre()
+    if not squadre_list:
+        st.info("Nessuna squadra configurata.")
+    else:
+        col_top1, col_top2 = st.columns([2, 1])
+        with col_top1:
+            sq_cr = st.selectbox("La mia squadra", squadre_list, key="cr_squadra")
+        with col_top2:
+            solo_budget = st.checkbox("Solo entro il mio budget", value=True, key="cr_budget")
+
+        an = analizza_completamento_rosa(sq_cr)
+        crediti = an["crediti"]
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Crediti", f"{crediti}cr")
+        c2.metric("Slot da riempire", an["tot_mancanti"])
+        c3.metric("Budget stimato", f"{an['tot_budget_richiesto']}cr")
+        delta = crediti - an["tot_budget_richiesto"]
+        c4.metric("Margine", f"{delta}cr", delta=f"{delta}cr")
+
+        if delta < 0:
+            st.warning("⚠️ Il budget non basta per la rosa ideale: punta su qualche low cost in più o rinuncia a un top.")
+        else:
+            st.success("✅ Il budget è compatibile con la struttura ideale.")
+
+        st.markdown("---")
+        st.markdown("<div class='fm-section-title'>📊 Struttura rosa attuale vs ideale</div>", unsafe_allow_html=True)
+
+        righe = []
+        for ruolo, d in an["ruoli"].items():
+            for f in ["top_player", "prima_fascia", "seconda_fascia", "low_cost"]:
+                righe.append({
+                    "Ruolo": ruolo,
+                    "Fascia": LABEL_FASCE[f],
+                    "Hai": d["per_fascia"].get(f, 0),
+                    "Ideale": d["target"].get(f, 0),
+                    "Ti servono": d["deficit"].get(f, 0),
+                })
+        st.dataframe(pd.DataFrame(righe), use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown("<div class='fm-section-title'>🎯 Giocatori che ti servono</div>", unsafe_allow_html=True)
+
+        nomi_ruoli = {"P": "Portieri", "D": "Difensori", "C": "Centrocampisti", "A": "Attaccanti"}
+        nessun_bisogno = True
+
+        for ruolo in ["P", "D", "C", "A"]:
+            d = an["ruoli"][ruolo]
+            if d["mancanti"] == 0:
+                continue
+            nessun_bisogno = False
+            st.markdown(f"#### {nomi_ruoli[ruolo]} — {d['posseduti']}/{d['req']} (ti mancano {d['mancanti']})")
+
+            for f in ["top_player", "prima_fascia", "seconda_fascia", "low_cost"]:
+                n_serve = d["deficit"].get(f, 0)
+                if n_serve == 0:
+                    continue
+                budget_max = crediti if solo_budget else None
+                sugg = suggerisci_giocatori(ruolo, f, budget_max=budget_max, n=8)
+                colore = COLORI_FASCE[f]
+                st.markdown(
+                    f"<div style='border-left:4px solid {colore};padding:4px 10px;margin:8px 0;"
+                    f"background:rgba(255,255,255,0.03);border-radius:6px;'>"
+                    f"<b style='color:{colore}'>{LABEL_FASCE[f]}</b> — te ne servono <b>{n_serve}</b></div>",
+                    unsafe_allow_html=True
+                )
+                if sugg is None or sugg.empty:
+                    st.caption("Nessun svincolato disponibile in questa fascia (o fuori budget).")
+                    continue
+                cols_show = ["Nome", "Squadra_SerieA", "Quotazione", "Prezzo_Cons", "FantaMedia", "Consiglio", "Note"]
+                cols_show = [c for c in cols_show if c in sugg.columns]
+                st.dataframe(
+                    sugg[cols_show].rename(columns={
+                        "Squadra_SerieA": "Squadra",
+                        "Prezzo_Cons": "Prezzo consigliato",
+                        "FantaMedia": "FantaMedia",
+                    }),
+                    use_container_width=True, hide_index=True
+                )
+
+        if nessun_bisogno:
+            st.success("🎉 Rosa completa! Non ti serve nessun altro giocatore.")
