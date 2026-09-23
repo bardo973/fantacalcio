@@ -1943,6 +1943,36 @@ def render_wizard():
 with st.sidebar:
     st.title("⚽ FantaManager")
     st.caption("2026/27 — 10 Squadre")
+    compatto = st.toggle(
+        "🗜️ Modalità compatta",
+        value=st.session_state.get("ui_compatta", False),
+        key="ui_compatta",
+        help="Riduce spazi e padding per vedere più righe — utile durante l'asta live",
+    )
+    if compatto:
+        st.markdown("""
+        <style>
+            /* 🗜️ Modalita' compatta — padding e spazi ridotti */
+            .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+            [data-testid="stVerticalBlock"] { gap: 0.35rem !important; }
+            [data-testid="stHorizontalBlock"] { gap: 0.4rem !important; }
+            div[data-testid="stMetric"] { padding: 6px 10px !important; }
+            div[data-testid="stMetricValue"] { font-size: 1.25rem !important; }
+            div[data-testid="stMetricLabel"] { font-size: 0.72rem !important; }
+            h1 { font-size: 1.6rem !important; margin-bottom: 0.2rem !important; }
+            h2 { font-size: 1.25rem !important; margin: 0.3rem 0 !important; }
+            h3 { font-size: 1.05rem !important; margin: 0.2rem 0 !important; }
+            .fm-section-title { font-size: 1rem !important; padding: 5px 10px !important; margin: 6px 0 !important; }
+            .card-giocatore, .card-3d-titolare { padding: 6px 10px !important; margin-bottom: 4px !important; }
+            .card-3d-panchina { padding: 4px 8px !important; margin-bottom: 3px !important; }
+            hr { margin: 8px 0 !important; }
+            .stButton>button { padding: 0.25rem 0.6rem !important; }
+            .stTabs [data-baseweb="tab"] { padding: 4px 10px !important; }
+            div[data-testid="stDataFrame"] { font-size: 0.8rem !important; }
+            div[data-testid="stExpander"] { margin-bottom: 4px !important; }
+            div[data-testid="stAlert"] { padding: 0.4rem 0.7rem !important; }
+        </style>
+        """, unsafe_allow_html=True)
     st.markdown(f"👤 **Account:** `{st.session_state.get('current_user', 'N/D')}`")
     if st.button("🚪 Logout", use_container_width=True):
         for k in list(st.session_state.keys()):
@@ -5190,6 +5220,27 @@ if menu == "🎯 Simulatore Rosa":
             st.markdown(s)
     else:
         st.info("ℹ️ Nessun suggerimento particolare. Il piano sembra bilanciato!")
+
+    # --- ALERT AFFARI: budget avanzato + ruoli ancora scoperti ---
+    ruoli_scoperti = [r for r in ["P", "D", "C", "A"] if conti_sim[r] < ROSA_REQ[r]]
+    if crediti_rimanenti > 0 and ruoli_scoperti:
+        st.markdown("---")
+        st.markdown("<div class='fm-section-title'>💡 Ti avanzano crediti: i migliori affari da prendere</div>", unsafe_allow_html=True)
+        st.caption(f"Hai {crediti_rimanenti}cr di margine e {len(ruoli_scoperti)} reparto/i da completare. Ecco i 3 migliori affari (per ValueScore) entro budget.")
+        nomi_ruoli_full = {"P": "Portieri", "D": "Difensori", "C": "Centrocampisti", "A": "Attaccanti"}
+        for ruolo in ruoli_scoperti:
+            mancano = ROSA_REQ[ruolo] - conti_sim[ruolo]
+            affari_r = trova_affari(ruolo=ruolo, budget_max=crediti_rimanenti,
+                                    solo_svincolati=True, n=3)
+            st.markdown(f"**{nomi_ruoli_full[ruolo]}** — ti mancano {mancano}")
+            if affari_r is None or affari_r.empty:
+                st.caption("Nessun affare disponibile entro il budget per questo ruolo.")
+                continue
+            cols_alert = [c for c in ["Nome", "Squadra_SerieA", "Prezzo_Cons", "FantaMedia", "Titolarita", "ValueScore"] if c in affari_r.columns]
+            st.dataframe(
+                affari_r[cols_alert].rename(columns={"Squadra_SerieA": "Squadra", "Prezzo_Cons": "Prezzo cons."}),
+                use_container_width=True, hide_index=True
+            )
 
     # --- DONUT BUDGET PREVISTO ---
     st.markdown("---")
