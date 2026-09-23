@@ -1245,8 +1245,123 @@ def suggerisci_giocatori(ruolo: str, fascia: str, budget_max: int = None, n: int
     if svinc.empty:
         return svinc
     svinc["Valore"] = svinc["FantaMedia"].astype(float) / svinc["Prezzo_Cons"].clip(lower=1) * 100
-    svinc = svinc.sort_values(["FantaMedia", "Valore"], ascending=[False, False])
+    # In modalita' "trova affari" la convenienza (Valore) viene prima del valore assoluto
+    svinc = svinc.sort_values(["Valore", "FantaMedia"], ascending=[False, False])
     return svinc.head(n)
+
+
+# ============================================================
+# 💎 MOTORE "AFFARI" — VALUE SCORE PER CACCIA AI SOTTOVALUTATI
+# ============================================================
+
+# Soglia di sufficienza usata come base per il rendimento (fantamedia)
+FM_SOGLIA_BASE = 5.5
+# FantaMedia media di riferimento per ruolo (coerente con calcola_prezzo_consigliato)
+MEDIE_RUOLO_FM = {"P": 5.5, "D": 6.2, "C": 6.8, "A": 7.5}
+
+
+def _get_stats_2627_df():
+    """Ritorna il DataFrame statistiche 2026-27 se caricato, altrimenti None."""
+    sps = st.session_state.get("stats_per_stagione", {})
+    df = sps.get("2026-27") if isinstance(sps, dict) else None
+    if df is None or df.empty or "Nome" not in df.columns:
+        return None
+    return df
+
+
+def _presenze_attese(nome, stats_2627):
+    """Presenze del giocatore nella stagione 2026-27 (0 se ignoto)."""
+    if stats_2627 is None:
+        return 0
+    try:
+        match = stats_2627[stats_2627["Nome"].str.lower() == str(nome).lower()]
+        if match.empty:
+            nm = fuzzy_match(nome, stats_2627["Nome"].tolist())
+            if nm:
+                match = stats_2627[stats_2627["Nome"] == nm]
+        if not match.empty and "Partite" in match.columns and pd.notna(match.iloc[0]["Partite"]):
+            return int(float(match.iloc[0]["Partite"]))
+    except Exception:
+        pass
+    return 0
+
+
+def calcola_value_score(g_info, stats_2627=None):
+    """Indice affare: quanto rende un giocatore rispetto a quanto costa.
+
+    Combina:
+      - rendimento sopra la soglia di sufficienza (FantaMedia - 5.5)
+      - indice di titolarita' (0-1) -> penalizza chi rischia la panchina
+      - presenze attese (radice, per smorzare) -> premia la continuita'
+    il tutto diviso per il prezzo consigliato. Piu' e' alto, piu' e' affare.
+    """
+    if not isinstance(g_info, dict):
+        try:
+            g_info = dict(g_info)
+        except Exception:
+            return 0.0
+    try:
+        fm = float(g_info.get("FantaMedia", 6.0) or 6.0)
+    except (TypeError, ValueError):
+        fm = 6.0
+    prezzo = max(1, prezzo_consigliato_di(g_info))
+
+    if stats_2627 is None:
+        stats_2627 = _get_stats_2627_df()
+
+    # qualita' = margine sopra la sufficienza (sempre positivo per giocatori validi)
+    qualita = max(0.05, fm - FM_SOGLIA_BASE)
+
+    # titolarita' 0-1
+    idx_tit = calcola_indice_titolarita(g_info, stats_2627) / 100.0
+    idx_tit = max(0.15, idx_tit)
+
+    # continuita': se non ho le presenze uso un valore neutro (0.55)
+    presenze = _presenze_attese(g_info.get("Nome", ""), stats_2627)
+    fattore_presenze = (presenze / 38.0) ** 0.5 if presenze > 0 else 0.55
+
+    score = qualita * idx_tit * fattore_presenze / prezzo * 100
+    return round(score, 2)
+
+
+def _delta_quotazione(g_info):
+    """Variazione di quotazione rispetto alla stagione precedente (None se ignota).
+    Un delta basso o negativo su un giocatore in crescita = sottovalutato dal mercato."""
+    try:
+        q = float(g_info.get("Quotazione", 0))
+        q0 = g_info.get("Quotazione_2025_26")
+        if q0 is None or (isinstance(q0, float) and pd.isna(q0)):
+            return None
+        return int(round(q - float(q0)))
+    except Exception:
+        return None
+
+
+def trova_affari(ruolo=None, budget_max=None, prezzo_max=None,
+                 solo_svincolati=True, n=25):
+    """Restituisce i migliori affari ordinati per ValueScore (qualita'/prezzo)."""
+    db = st.session_state.giocatori_db
+    pool = get_svincolati(db) if solo_svincolati else db.copy()
+    if pool is None or pool.empty:
+        return pd.DataFrame()
+    if ruolo and ruolo not in ("Tutti", None):
+        pool = pool[pool["Ruolo"] == ruolo]
+    if pool.empty:
+        return pool
+    pool = pool.copy()
+    stats_2627 = _get_stats_2627_df()
+    pool["Prezzo_Cons"] = pool.apply(lambda r: prezzo_consigliato_di(r.to_dict()), axis=1)
+    pool["ValueScore"] = pool.apply(lambda r: calcola_value_score(r.to_dict(), stats_2627), axis=1)
+    pool["Titolarita"] = pool.apply(lambda r: calcola_indice_titolarita(r.to_dict(), stats_2627), axis=1)
+    pool["Delta_Quot"] = pool.apply(lambda r: _delta_quotazione(r.to_dict()), axis=1)
+    if prezzo_max is not None:
+        pool = pool[pool["Prezzo_Cons"] <= prezzo_max]
+    if budget_max is not None:
+        pool = pool[pool["Prezzo_Cons"] <= budget_max]
+    if pool.empty:
+        return pool
+    pool = pool.sort_values(["ValueScore", "FantaMedia"], ascending=[False, False])
+    return pool.head(n)
 
 
 
@@ -2026,6 +2141,7 @@ menu = st.radio(
         "📋 Rose & Contratti",
         "🎯 Simulatore Rosa",
         "🧩 Completa Rosa",
+        "💎 Affari",
         "📈 Statistiche Storiche",
         "⚙️ Importa & Esporta"
     ],
@@ -5300,3 +5416,89 @@ elif menu == "🧩 Completa Rosa":
 
         if nessun_bisogno:
             st.success("🎉 Rosa completa! Non ti serve nessun altro giocatore.")
+
+
+# ============================================================
+# 10. AFFARI — I MIGLIORI GIOCATORI A BASSO COSTO
+# ============================================================
+elif menu == "💎 Affari":
+    st.header("💎 Affari — i migliori a basso costo")
+    st.caption(
+        "Ordina i giocatori per ValueScore = quanto rendono rispetto a quanto costano. "
+        "Tiene conto di FantaMedia, titolarita' e presenze attese, il tutto diviso per il prezzo consigliato."
+    )
+
+    fc1, fc2, fc3, fc4 = st.columns([1, 1, 1, 1.2])
+    with fc1:
+        ruolo_aff = st.selectbox("Ruolo", ["Tutti", "P", "D", "C", "A"], key="aff_ruolo")
+    with fc2:
+        prezzo_max_aff = st.slider("Prezzo max (cr)", 1, 60, 30, key="aff_prezzo_max",
+                                   help="Mostra solo giocatori con prezzo consigliato entro questa soglia")
+    with fc3:
+        solo_svinc_aff = st.checkbox("Solo svincolati", value=True, key="aff_svinc")
+    with fc4:
+        squadre_aff = get_nomi_squadre()
+        usa_budget = st.checkbox("Entro budget squadra", value=False, key="aff_usa_budget")
+        sq_aff = st.selectbox("Squadra", squadre_aff, key="aff_squadra",
+                              disabled=not usa_budget) if squadre_aff else None
+
+    budget_aff = None
+    if usa_budget and sq_aff:
+        budget_aff = st.session_state.squadre[sq_aff]["crediti"]
+
+    affari = trova_affari(
+        ruolo=ruolo_aff,
+        budget_max=budget_aff,
+        prezzo_max=prezzo_max_aff,
+        solo_svincolati=solo_svinc_aff,
+        n=40,
+    )
+
+    if affari is None or affari.empty:
+        st.info("Nessun affare trovato con questi filtri. Prova ad alzare il prezzo massimo o togliere il vincolo di budget.")
+    else:
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Affari trovati", len(affari))
+        m2.metric("Prezzo medio", f"{affari['Prezzo_Cons'].mean():.0f}cr")
+        m3.metric("FantaMedia media", f"{affari['FantaMedia'].astype(float).mean():.2f}")
+        top_aff = affari.iloc[0]
+        m4.metric("Miglior affare", str(top_aff['Nome']), delta=f"{top_aff['ValueScore']:.1f} pt")
+
+        st.markdown("---")
+        st.markdown("<div class='fm-section-title'>Classifica affari (per ValueScore)</div>", unsafe_allow_html=True)
+
+        cols_aff = ["Nome", "Ruolo", "Squadra_SerieA", "Prezzo_Cons", "FantaMedia",
+                    "Titolarita", "Delta_Quot", "ValueScore", "Consiglio", "Note"]
+        cols_aff = [c for c in cols_aff if c in affari.columns]
+        vis = affari[cols_aff].copy()
+        max_vs = float(vis["ValueScore"].max()) if "ValueScore" in vis.columns and len(vis) else 1.0
+        col_cfg = {
+            "Squadra_SerieA": st.column_config.TextColumn("Squadra"),
+            "Prezzo_Cons": st.column_config.NumberColumn("Prezzo cons.", format="%d cr"),
+            "FantaMedia": st.column_config.NumberColumn("FantaMedia", format="%.2f"),
+            "Titolarita": st.column_config.ProgressColumn("Titolarita", min_value=0, max_value=100, format="%d"),
+            "Delta_Quot": st.column_config.NumberColumn("Delta Quot.", format="%d", help="Variazione quotazione vs stagione precedente: basso/negativo = sottovalutato"),
+            "ValueScore": st.column_config.ProgressColumn("ValueScore", min_value=0, max_value=max(1.0, max_vs), format="%.1f"),
+        }
+        col_cfg = {k: v for k, v in col_cfg.items() if k in vis.columns}
+        st.dataframe(vis, use_container_width=True, hide_index=True, column_config=col_cfg)
+
+        if "Delta_Quot" in affari.columns:
+            sottov = affari[affari["Delta_Quot"].notna() & (affari["Delta_Quot"] <= 0)]
+            if not sottov.empty:
+                st.markdown("---")
+                st.markdown("<div class='fm-section-title'>Sottovalutati dal mercato</div>", unsafe_allow_html=True)
+                st.caption("Prezzo fermo o in calo rispetto alla stagione precedente, ma con buon ValueScore: potenziali occasioni all'asta.")
+                cols_sv = [c for c in ["Nome", "Ruolo", "Squadra_SerieA", "Prezzo_Cons", "FantaMedia", "Delta_Quot", "ValueScore"] if c in sottov.columns]
+                st.dataframe(sottov[cols_sv].head(12), use_container_width=True, hide_index=True)
+
+        try:
+            st.markdown("---")
+            st.markdown("<div class='fm-section-title'>Prezzo vs Rendimento</div>", unsafe_allow_html=True)
+            st.caption("Piu' un giocatore sta in alto a sinistra (alta FantaMedia, basso prezzo), piu' e' un affare.")
+            scatter_df = affari[["Prezzo_Cons", "FantaMedia", "Ruolo"]].copy()
+            scatter_df["FantaMedia"] = pd.to_numeric(scatter_df["FantaMedia"], errors="coerce")
+            scatter_df = scatter_df.dropna()
+            st.scatter_chart(scatter_df, x="Prezzo_Cons", y="FantaMedia", color="Ruolo", height=360)
+        except Exception:
+            pass
