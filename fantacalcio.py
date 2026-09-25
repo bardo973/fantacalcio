@@ -3093,6 +3093,20 @@ if menu == "🔍 Scouting & Database":
                 df_wl["Indice_Titolarita"] = df_wl.apply(lambda row: calcola_indice_titolarita(row.to_dict(), stats_2627_wl), axis=1)
                 df_wl["Delta_AI"] = df_wl["Prezzo_AI"].fillna(0).astype(int) - df_wl["Quotazione"].fillna(0).astype(int)
 
+                # Migliori affari: ValueScore nel quartile alto -> badge dedicato
+                _vs_wl = df_wl["ValueScore"].fillna(0)
+                if len(_vs_wl) >= 4:
+                    _vs_soglia_top = float(_vs_wl.quantile(0.75))
+                else:
+                    _vs_soglia_top = float(_vs_wl.max()) if len(_vs_wl) else 0.0
+                df_wl["Top_Affare"] = (df_wl["ValueScore"].fillna(0) >= _vs_soglia_top) & (df_wl["ValueScore"].fillna(0) > 0)
+
+                def _badge_affare_html():
+                    return ("<div style='display:inline-block;background:linear-gradient(90deg,#f59e0b,#ef4444);"
+                            "color:#fff;font-weight:800;font-size:0.72em;letter-spacing:.5px;"
+                            "border-radius:10px;padding:2px 10px;"
+                            "box-shadow:0 0 8px rgba(245,158,11,.6);'>🔥 TOP AFFARE</div>")
+
                 # --- Metriche riassuntive con colori ruolo ---
                 colori_ruolo_wl = {"P": "#3b82f6", "D": "#22c55e", "C": "#eab308", "A": "#ef4444"}
                 ruoli_nomi_wl = {"P": "🧤 Portieri", "D": "🛡️ Difensori", "C": "⚙️ Centrocampisti", "A": "⚔️ Attaccanti"}
@@ -3122,6 +3136,9 @@ if menu == "🔍 Scouting & Database":
                 mcol1.metric("💰 Budget quotazioni", f"{budget_quot}cr")
                 mcol2.metric("🧠 Budget Prezzo AI", f"{budget_ai}cr", delta=f"{budget_ai - budget_quot:+d}cr")
                 mcol3.metric("🔥 Affari (AI > quot.)", n_affari)
+                _n_top = int(df_wl["Top_Affare"].sum())
+                if _n_top:
+                    st.caption(f"🔥 **{_n_top}** top affari evidenziati (miglior rapporto qualità/prezzo).")
 
                 st.markdown("---")
 
@@ -3164,12 +3181,14 @@ if menu == "🔍 Scouting & Database":
                 elif vista_wl == "📋 Tabella":
                     df_tab = df_wl.copy()
                     df_tab["Proprietario"] = df_tab["Nome"].apply(lambda n: idx_wl.get(str(n).lower(), "Svincolato 🟢"))
-                    cols_tab = [c for c in ["Nome", "Ruolo", "Squadra_SerieA", "Quotazione", "Prezzo_AI", "Delta_AI", "FantaMedia", "ValueScore", "Proprietario"] if c in df_tab.columns]
+                    df_tab["Affare"] = df_wl["Top_Affare"].map(lambda x: "🔥 TOP" if x else "")
+                    cols_tab = [c for c in ["Affare", "Nome", "Ruolo", "Squadra_SerieA", "Quotazione", "Prezzo_AI", "Delta_AI", "FantaMedia", "ValueScore", "Proprietario"] if c in df_tab.columns]
                     df_tab = df_tab[cols_tab]
                     max_vs_wl = float(df_tab["ValueScore"].max()) if "ValueScore" in df_tab.columns and len(df_tab) else 1.0
                     st.dataframe(
                         df_tab, use_container_width=True, hide_index=True,
                         column_config={
+                            "Affare": st.column_config.TextColumn("🔥 Affare", help="Migliori affari per rapporto qualità/prezzo"),
                             "Squadra_SerieA": st.column_config.TextColumn("Squadra"),
                             "Prezzo_AI": st.column_config.NumberColumn("Prezzo AI", format="%d cr"),
                             "Quotazione": st.column_config.NumberColumn("Quot.", format="%d cr"),
@@ -3195,6 +3214,8 @@ if menu == "🔍 Scouting & Database":
                             rdict["Indice_Affare"] = round(float(rdict.get("FantaMedia", 6.0)) / max(float(rdict.get("Quotazione", 1)), 1), 2)
                         if pd.isna(rdict.get("Indice_Titolarita")):
                             rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_wl)
+                        if bool(row_wl.get("Top_Affare")):
+                            st.markdown(f"<div style='text-align:center;'>{_badge_affare_html()}</div>", unsafe_allow_html=True)
                         st.markdown(render_flip_card(rdict, stats_ps_wl, stats_2627_wl), unsafe_allow_html=True)
                         nome_wl = str(rdict.get("Nome", ""))
                         if st.button("❌ Rimuovi", key=f"wl_rm_{nome_wl}", help=f"Rimuovi {nome_wl}", use_container_width=True):
