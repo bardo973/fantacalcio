@@ -640,6 +640,12 @@ class StateManager:
         try:
             with open(tmp.name, "wb") as f:
                 pickle.dump(data, f)
+            # Backup di rollio: conserva sempre la versione precedente prima di sovrascrivere
+            try:
+                if os.path.exists(pkl_path):
+                    shutil.copy2(pkl_path, pkl_path + ".bak")
+            except Exception:
+                pass
             shutil.move(tmp.name, pkl_path)
         except Exception:
             if os.path.exists(tmp.name):
@@ -649,14 +655,16 @@ class StateManager:
     @staticmethod
     def load():
         pkl_path, json_path = get_user_save_paths()
-        if os.path.exists(pkl_path):
-            try:
-                with open(pkl_path, "rb") as f:
-                    data = pickle.load(f)
-                StateManager._hydrate(data)
-                return True
-            except Exception:
-                pass
+        # Prova il file principale, poi il backup di rollio (.bak) se il primo è danneggiato
+        for _p in (pkl_path, pkl_path + ".bak"):
+            if os.path.exists(_p):
+                try:
+                    with open(_p, "rb") as f:
+                        data = pickle.load(f)
+                    StateManager._hydrate(data)
+                    return True
+                except Exception:
+                    pass
         if os.path.exists(json_path):
             try:
                 with open(json_path, "r", encoding="utf-8") as f:
@@ -3755,19 +3763,20 @@ if menu == "🛒 Mercato":
 # ============================================================
 if menu == "🤝 Scambi & Prestiti":
     st.header("🤝 Scambi Definitivi & Prestiti")
+    st.caption("💡 Puoi scambiare 1, 2 o 3 giocatori per squadra (con eventuale conguaglio in crediti). Seleziona più nomi in «Cede giocatori».")
 
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("Squadra A")
         sq1 = st.selectbox("Squadra 1", get_nomi_squadre(), key="sc1")
         rosa1 = [g for g in st.session_state.squadre[sq1]["rosa"] if g.get("Prestito_Da") is None or g.get("Prestito_Da") == sq1]
-        g1 = st.multiselect("Cede giocatori", [g["Nome"] for g in rosa1], key="g1")
+        g1 = st.multiselect("Cede giocatori (fino a 3)", [g["Nome"] for g in rosa1], key="g1", max_selections=3)
         d1 = st.number_input(f"Conguaglio da {sq1}", min_value=0, max_value=st.session_state.squadre[sq1]["crediti"], value=0, key="d1")
     with c2:
         st.subheader("Squadra B")
         sq2 = st.selectbox("Squadra 2", [s for s in get_nomi_squadre() if s != sq1], key="sc2")
         rosa2 = [g for g in st.session_state.squadre[sq2]["rosa"] if g.get("Prestito_Da") is None or g.get("Prestito_Da") == sq2]
-        g2 = st.multiselect("Cede giocatori", [g["Nome"] for g in rosa2], key="g2")
+        g2 = st.multiselect("Cede giocatori (fino a 3)", [g["Nome"] for g in rosa2], key="g2", max_selections=3)
         d2 = st.number_input(f"Conguaglio da {sq2}", min_value=0, max_value=st.session_state.squadre[sq2]["crediti"], value=0, key="d2")
 
     tipo = st.radio("Tipo operazione", ["Scambio Definitivo", "Prestito 6 mesi", "Prestito 1 anno"], horizontal=True)
