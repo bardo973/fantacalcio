@@ -3126,6 +3126,29 @@ if menu == "🔨 Asta Live":
     st.header("🔨 Gestione Asta")
     st.caption("Gestisci l'asta in tempo reale: seleziona giocatore, raccogli offerte, assegna.")
 
+    # --- 🔔 POPUP AVVISO WATCHLIST ---
+    def _popup_watchlist_contenuto(nome, ruolo, squadra, quot, fm):
+        st.markdown(
+            "<div style='text-align:center;'>"
+            "<div style='font-size:2.6em;'>🔔⭐</div>"
+            f"<div style='font-size:1.5em;font-weight:bold;color:#ffd700;margin-top:4px;'>{nome}</div>"
+            f"<div style='color:#aaa;margin-top:2px;'>{ruolo} · {squadra}</div>"
+            f"<div style='margin-top:10px;font-size:1.05em;'>Quotazione <b>{quot}cr</b> · FantaMedia <b>{fm}</b></div>"
+            "<div style='margin-top:8px;color:#00d26a;font-weight:600;'>È nella tua watchlist: preparati a rilanciare!</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    if hasattr(st, "dialog"):
+        @st.dialog("🔔 Giocatore della watchlist lanciato!")
+        def _popup_watchlist(nome, ruolo, squadra, quot, fm):
+            _popup_watchlist_contenuto(nome, ruolo, squadra, quot, fm)
+            if st.button("👍 Ho capito", type="primary", use_container_width=True):
+                st.session_state["_wl_popup_open"] = None
+                st.rerun()
+    else:
+        _popup_watchlist = None
+
     # --- SIMULAZIONE ASTA AVVERSARIA ---
     with st.expander("🔮 Simula Asta Avversaria", expanded=False):
         st.caption("Inserisci il giocatore che stanno chiamando gli altri: scopri chi può permetterselo e a quanto.")
@@ -3300,6 +3323,20 @@ if menu == "🔨 Asta Live":
 
             if g_asta:
                 info = svinc[svinc["Nome"] == g_asta].iloc[0]
+
+                # --- 🔔 Avviso quando viene lanciato un giocatore della watchlist ---
+                if g_asta in st.session_state.watchlist:
+                    if st.session_state.get("_wl_last_alert") != g_asta:
+                        st.session_state["_wl_last_alert"] = g_asta
+                        st.session_state["_wl_popup_open"] = g_asta
+                        st.toast(f"🔔 {g_asta} (watchlist) è all'asta!", icon="⭐")
+                    if st.session_state.get("_wl_popup_open") == g_asta:
+                        if _popup_watchlist is not None:
+                            _popup_watchlist(g_asta, info["Ruolo"], info["Squadra_SerieA"], int(info["Quotazione"]), info["FantaMedia"])
+                        else:
+                            st.warning(f"🔔 **{g_asta}** è nella tua watchlist ed è appena stato lanciato all'asta! Preparati a rilanciare.")
+                            st.session_state["_wl_popup_open"] = None
+
                 with col2:
                     st.markdown(
                         f"<div style='background:#1a1a2e;padding:12px;border-radius:8px;text-align:center;'>"
