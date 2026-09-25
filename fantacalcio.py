@@ -610,6 +610,7 @@ class StateManager:
         st.session_state.giocatori_db = snap["giocatori_db"]
         st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
         st.session_state.stats_storiche = snap["stats_storiche"]
+        st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db, snap.get("stats_storiche"))
         st.session_state.stats_per_stagione = snap["stats_per_stagione"]
         st.session_state.crediti_iniziali = snap["crediti_iniziali"]
         st.session_state.quotazioni_2025_26 = snap["quotazioni_2025_26"]
@@ -685,6 +686,7 @@ class StateManager:
             st.session_state.giocatori_db["Prezzo_Consigliato"] = None
         st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
         st.session_state.stats_storiche = data.get("stats_storiche", pd.DataFrame())
+        st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db, st.session_state.stats_storiche)
         st.session_state.stats_per_stagione = data.get("stats_per_stagione", {})
         st.session_state.crediti_iniziali = data.get("crediti_iniziali", CREDITI_INIZIALI)
         st.session_state.quotazioni_2025_26 = data.get("quotazioni_2025_26", pd.DataFrame())
@@ -880,6 +882,36 @@ def calcola_prezzo_consigliato(g_info, stats_df=None):
         spiegazione += f"**Statistiche:**{trend_note} → fattore {fattore_trend:.2f}\n"
     spiegazione += f"\n**💡 Prezzo consigliato: {prezzo}cr**"
     return prezzo, spiegazione
+
+def assicura_prezzi_ai(db, stats_df=None, force=False):
+    """Calcola il Prezzo_Consigliato AI per TUTTI i giocatori del DB che ne sono privi
+    (o per tutti se force=True). Garantisce che ogni sezione mostri il prezzo AI
+    per l'intero listone, indipendentemente dal numero di giocatori (default,
+    import, snapshot, ripristino...). Restituisce il DataFrame aggiornato."""
+    if db is None or getattr(db, "empty", True):
+        return db
+    if "Prezzo_Consigliato" not in db.columns:
+        db["Prezzo_Consigliato"] = None
+    # Il calcolo della scarsita' legge st.session_state.giocatori_db: allineiamolo
+    st.session_state.giocatori_db = db
+    if stats_df is None:
+        stats_df = st.session_state.get("stats_storiche")
+        if stats_df is not None and getattr(stats_df, "empty", True):
+            stats_df = None
+    prezzi = []
+    for _, row in db.iterrows():
+        val = row.get("Prezzo_Consigliato")
+        if force or pd.isna(val):
+            try:
+                pc, _ = calcola_prezzo_consigliato(row.to_dict(), stats_df)
+            except Exception:
+                pc = None if pd.isna(val) else val
+            prezzi.append(pc)
+        else:
+            prezzi.append(val)
+    db["Prezzo_Consigliato"] = prezzi
+    st.session_state.giocatori_db = db
+    return db
 
 def riepilogo_rosa(squadra_nome):
     rosa = st.session_state.squadre[squadra_nome]["rosa"]
@@ -1882,6 +1914,7 @@ if "initialized" not in st.session_state:
         for sq in get_nomi_squadre():
             st.session_state.squadre[sq] = {"crediti": CREDITI_INIZIALI, "rosa": []}
 
+    st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db)
     st.session_state.initialized = True
 
 # ============================================================
@@ -1904,6 +1937,7 @@ def render_wizard():
         with c1:
             if st.button("✅ Usa Listone Default", use_container_width=True):
                 st.session_state.giocatori_db = pd.DataFrame(LISTONE_DEFAULT)
+                st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db)
                 st.session_state.wizard_step = 2
                 save_state()
                 st.rerun()
@@ -2080,6 +2114,7 @@ with st.sidebar:
                 st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
                 stats = data.get("stats_storiche", [])
                 st.session_state.stats_storiche = pd.DataFrame(stats) if stats else pd.DataFrame()
+                st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db, st.session_state.stats_storiche)
                 st.session_state.stats_per_stagione = {}
                 for stag, records in data.get("stats_per_stagione", {}).items():
                     st.session_state.stats_per_stagione[stag] = pd.DataFrame(records) if records else pd.DataFrame()
