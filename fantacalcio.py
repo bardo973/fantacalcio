@@ -984,6 +984,31 @@ def _get_fm_2627(nome):
         return float(match.iloc[0]["FantaMedia"])
     return None
 
+def _get_gol_assist_2627(nome):
+    """Ritorna (gol, assist) della stagione 2026-27 come interi (0 se non disponibili)."""
+    if "stats_per_stagione" not in st.session_state:
+        return 0, 0
+    s2627 = st.session_state.stats_per_stagione.get("2026-27")
+    if s2627 is None or s2627.empty or "Nome" not in s2627.columns:
+        return 0, 0
+    match = s2627[s2627["Nome"].str.lower() == str(nome).lower()]
+    if match.empty:
+        nm = fuzzy_match(nome, s2627["Nome"].tolist())
+        if nm:
+            match = s2627[s2627["Nome"] == nm]
+    if match.empty:
+        return 0, 0
+    r = match.iloc[0]
+    def _num(aliases):
+        v = _stat_value(r, aliases, default=0)
+        try:
+            return int(float(v))
+        except (TypeError, ValueError):
+            return 0
+    gol = _num(["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti", "GF", "I gF", "Reti fatte"])
+    assist = _num(["Assist", "Assists", "Assist fatti", "Ass", "Passaggi vincenti"])
+    return gol, assist
+
 def simula_formazione(squadra_nome, modulo):
     rosa = st.session_state.squadre[squadra_nome]["rosa"]
     if not rosa:
@@ -4146,6 +4171,35 @@ if menu == "📋 Rose & Contratti":
                                         rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_rosa)
                                     with card_cols[idx_c % len(card_cols)]:
                                         st.markdown(render_flip_card(rdict, stats_ps_rosa, stats_2627_rosa), unsafe_allow_html=True)
+
+                    # --- 📊 TABELLA RIASSUNTIVA GOL & ASSIST ---
+                    st.markdown("---")
+                    st.subheader("⚽ Gol & Assist Rosa (2026/27)")
+                    ga_rows = []
+                    for _, rp in display.iterrows():
+                        nome_p = rp.get("Nome", "")
+                        gol_p, ast_p = _get_gol_assist_2627(nome_p)
+                        ga_rows.append({
+                            "Nome": nome_p,
+                            "Ruolo": rp.get("Ruolo", ""),
+                            "Gol": gol_p,
+                            "Assist": ast_p,
+                            "Gol+Assist": gol_p + ast_p,
+                        })
+                    ga_df = pd.DataFrame(ga_rows)
+                    if not ga_df.empty:
+                        ga_df = ga_df.sort_values(["Gol+Assist", "Gol"], ascending=[False, False])
+                        g_tot = int(ga_df["Gol"].sum())
+                        a_tot = int(ga_df["Assist"].sum())
+                        c_g1, c_g2, c_g3 = st.columns(3)
+                        c_g1.metric("⚽ Gol totali", g_tot)
+                        c_g2.metric("🎯 Assist totali", a_tot)
+                        c_g3.metric("Σ Gol+Assist", g_tot + a_tot)
+                        tot_row = {"Nome": "🏆 TOTALE", "Ruolo": "", "Gol": g_tot, "Assist": a_tot, "Gol+Assist": g_tot + a_tot}
+                        ga_show = pd.concat([ga_df, pd.DataFrame([tot_row])], ignore_index=True)
+                        st.dataframe(ga_show, use_container_width=True, hide_index=True)
+                        if st.session_state.get("stats_per_stagione", {}).get("2026-27") is None:
+                            st.caption("ℹ️ Carica le statistiche 2026/27 (sezione 📈 Statistiche Storiche) per popolare gol e assist.")
 
                     in_scadenza = display[display["Stato_Contratto"].str.contains("🟠|🔴")]
                     if not in_scadenza.empty:
