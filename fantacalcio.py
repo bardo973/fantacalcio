@@ -3054,78 +3054,170 @@ if menu == "🔍 Scouting & Database":
 
         with st.expander("⭐ Watchlist", expanded=True):
             st.subheader("⭐ Watchlist")
-            g_sel = st.selectbox("Aggiungi giocatore", df["Nome"].values, key="wl")
-            c1_wl, c2_wl = st.columns([1, 1])
-            with c1_wl:
-                if st.button("Aggiungi", use_container_width=True):
-                    if g_sel not in st.session_state.watchlist:
-                        st.session_state.watchlist.append(g_sel)
-                        save_state()
-                        st.success(f"{g_sel} aggiunto!")
-                        st.rerun()
-            with c2_wl:
-                if st.button("🗑️ Svuota Watchlist", use_container_width=True):
-                    st.session_state.watchlist = []
-                    save_state()
-                    st.rerun()
 
-            if st.session_state.watchlist:
+            # --- Aggiunta rapida (anche multipla) ---
+            gia_in_wl = set(st.session_state.watchlist)
+            opzioni_add = [n for n in df["Nome"].values if n not in gia_in_wl]
+            c_add1, c_add2 = st.columns([3, 1])
+            with c_add1:
+                sel_add = st.multiselect("Aggiungi giocatori", opzioni_add, key="wl_add_multi",
+                                         placeholder="Cerca e seleziona uno o più giocatori...")
+            with c_add2:
+                st.write("")
+                st.write("")
+                if st.button("➕ Aggiungi", use_container_width=True, type="primary"):
+                    added = 0
+                    for n in sel_add:
+                        if n not in st.session_state.watchlist:
+                            st.session_state.watchlist.append(n)
+                            added += 1
+                    if added:
+                        save_state()
+                        st.success(f"{added} giocatore/i aggiunto/i!")
+                        st.rerun()
+                    else:
+                        st.info("Nessun nuovo giocatore selezionato.")
+
+            if not st.session_state.watchlist:
+                st.info("⭐ La watchlist è vuota. Aggiungi i giocatori che vuoi tenere d'occhio all'asta.")
+            else:
                 df_wl = df[df["Nome"].isin(st.session_state.watchlist)].copy()
                 stats_df = st.session_state.stats_storiche if not st.session_state.stats_storiche.empty else None
-                df_wl["Prezzo_AI"] = df_wl.apply(lambda row: calcola_prezzo_consigliato(row.to_dict(), stats_df)[0], axis=1)
-                if "Quotazione_2025_26" in df_wl.columns and "Variazione_%" not in df_wl.columns:
-                    df_wl["Variazione_%"] = round((df_wl["Quotazione"] - df_wl["Quotazione_2025_26"]) / df_wl["Quotazione_2025_26"].replace(0, 1) * 100, 1)
-
-                # Metriche riassuntive
-                tot_wl = len(df_wl)
-                conti_wl = {"P": 0, "D": 0, "C": 0, "A": 0}
-                budget_wl = 0
-                for _, r in df_wl.iterrows():
-                    ru = r.get("Ruolo", "C")
-                    if ru in conti_wl:
-                        conti_wl[ru] += 1
-                    budget_wl += int(r.get("Quotazione", 0))
-                m1, m2, m3, m4, m5 = st.columns(5)
-                with m1:
-                    st.metric("Totale Watchlist", tot_wl)
-                with m2:
-                    st.metric("🧤 Portieri", conti_wl["P"])
-                with m3:
-                    st.metric("🛡️ Difensori", conti_wl["D"])
-                with m4:
-                    st.metric("⚙️ Centrocampisti", conti_wl["C"])
-                with m5:
-                    st.metric("⚔️ Attaccanti", conti_wl["A"])
-                st.caption(f"💰 Budget totale quotazioni: **{budget_wl}cr** | Prezzo AI medio: **{int(df_wl['Prezzo_AI'].mean())}cr**")
-
                 stats_ps_wl = st.session_state.get("stats_per_stagione", {})
                 stats_2627_wl = stats_ps_wl.get("2026-27") if "2026-27" in stats_ps_wl else None
                 idx_wl = get_player_index()
 
-                # Card per ruolo
-                ruoli_wl = ["P", "D", "C", "A"]
+                # Calcoli: Prezzo AI, ValueScore, titolarità, affare
+                df_wl["Prezzo_AI"] = df_wl.apply(lambda row: calcola_prezzo_consigliato(row.to_dict(), stats_df)[0], axis=1)
+                df_wl["ValueScore"] = df_wl.apply(lambda row: calcola_value_score(row.to_dict(), stats_2627_wl), axis=1)
+                df_wl["Indice_Titolarita"] = df_wl.apply(lambda row: calcola_indice_titolarita(row.to_dict(), stats_2627_wl), axis=1)
+                df_wl["Delta_AI"] = df_wl["Prezzo_AI"].fillna(0).astype(int) - df_wl["Quotazione"].fillna(0).astype(int)
+
+                # --- Metriche riassuntive con colori ruolo ---
+                colori_ruolo_wl = {"P": "#3b82f6", "D": "#22c55e", "C": "#eab308", "A": "#ef4444"}
                 ruoli_nomi_wl = {"P": "🧤 Portieri", "D": "🛡️ Difensori", "C": "⚙️ Centrocampisti", "A": "⚔️ Attaccanti"}
-                cols_wl = st.columns(4)
-                for idx_r, ruolo in enumerate(ruoli_wl):
-                    with cols_wl[idx_r]:
-                        st.markdown(f"**{ruoli_nomi_wl[ruolo]}**")
-                        df_r_wl = df_wl[df_wl["Ruolo"] == ruolo].sort_values("Indice_Titolarita", ascending=False)
-                        if not df_r_wl.empty:
-                            for _, row_wl in df_r_wl.iterrows():
-                                rdict = row_wl.to_dict()
-                                rdict["Proprietario"] = idx_wl.get(str(rdict.get("Nome", "")).lower(), "Svincolato 🟢")
-                                if pd.isna(rdict.get("Indice_Affare")):
-                                    rdict["Indice_Affare"] = round(float(rdict.get("FantaMedia", 6.0)) / max(float(rdict.get("Quotazione", 1)), 1), 2)
-                                if pd.isna(rdict.get("Indice_Titolarita")):
-                                    rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_wl)
-                                st.markdown(render_flip_card(rdict, stats_ps_wl, stats_2627_wl), unsafe_allow_html=True)
-                                nome_wl = str(rdict.get("Nome", ""))
-                                if st.button("❌ Rimuovi", key=f"wl_rm_{ruolo}_{nome_wl}", help=f"Rimuovi {nome_wl} dalla watchlist", use_container_width=True):
-                                    st.session_state.watchlist = [g for g in st.session_state.watchlist if g != nome_wl]
-                                    save_state()
-                                    st.rerun()
-                        else:
-                            st.caption("Nessuno")
+                conti_wl = {"P": 0, "D": 0, "C": 0, "A": 0}
+                for _, r in df_wl.iterrows():
+                    ru = r.get("Ruolo", "C")
+                    if ru in conti_wl:
+                        conti_wl[ru] += 1
+                budget_quot = int(df_wl["Quotazione"].fillna(0).sum())
+                budget_ai = int(df_wl["Prezzo_AI"].fillna(0).sum())
+                n_affari = int((df_wl["Delta_AI"] > 0).sum())
+
+                chips = "".join(
+                    f"<span style='display:inline-block;background:{colori_ruolo_wl[ru]}22;"
+                    f"border:1px solid {colori_ruolo_wl[ru]};color:{colori_ruolo_wl[ru]};"
+                    f"border-radius:14px;padding:3px 12px;margin:3px;font-weight:600;'>"
+                    f"{ruoli_nomi_wl[ru]}: {conti_wl[ru]}</span>"
+                    for ru in ["P", "D", "C", "A"]
+                )
+                st.markdown(
+                    f"<div style='display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;'>"
+                    f"<span style='font-size:1.15em;font-weight:700;'>⭐ {len(df_wl)} in watchlist</span>"
+                    f"<span style='margin-left:6px;'>{chips}</span></div>",
+                    unsafe_allow_html=True,
+                )
+                mcol1, mcol2, mcol3 = st.columns(3)
+                mcol1.metric("💰 Budget quotazioni", f"{budget_quot}cr")
+                mcol2.metric("🧠 Budget Prezzo AI", f"{budget_ai}cr", delta=f"{budget_ai - budget_quot:+d}cr")
+                mcol3.metric("🔥 Affari (AI > quot.)", n_affari)
+
+                st.markdown("---")
+
+                # --- Controlli visualizzazione ---
+                ctrl1, ctrl2, ctrl3 = st.columns([2, 2, 2])
+                with ctrl1:
+                    ordina_wl = st.selectbox("Ordina per",
+                        ["💎 Value per prezzo", "⭐ FantaMedia", "💰 Quotazione", "🧠 Prezzo AI", "🔥 Miglior affare (Δ AI)", "📈 Titolarità"],
+                        key="wl_sort")
+                with ctrl2:
+                    filtro_ruolo_wl = st.selectbox("Ruolo", ["Tutti", "🧤 Portieri", "🛡️ Difensori", "⚙️ Centrocampisti", "⚔️ Attaccanti"], key="wl_filtro_ruolo")
+                with ctrl3:
+                    vista_wl = st.radio("Vista", ["🃏 Card", "📋 Tabella"], horizontal=True, key="wl_vista")
+                c_svuota1, _sp_wl = st.columns([1, 3])
+                with c_svuota1:
+                    if st.button("🗑️ Svuota watchlist", use_container_width=True, key="wl_svuota"):
+                        st.session_state.watchlist = []
+                        save_state()
+                        st.rerun()
+
+                # ordinamento
+                sort_map = {
+                    "💎 Value per prezzo": ("ValueScore", False),
+                    "⭐ FantaMedia": ("FantaMedia", False),
+                    "💰 Quotazione": ("Quotazione", False),
+                    "🧠 Prezzo AI": ("Prezzo_AI", False),
+                    "🔥 Miglior affare (Δ AI)": ("Delta_AI", False),
+                    "📈 Titolarità": ("Indice_Titolarita", False),
+                }
+                sort_col, sort_asc = sort_map.get(ordina_wl, ("ValueScore", False))
+                df_wl = df_wl.sort_values(sort_col, ascending=sort_asc, na_position="last")
+
+                # filtro ruolo
+                mappa_filtro = {"🧤 Portieri": "P", "🛡️ Difensori": "D", "⚙️ Centrocampisti": "C", "⚔️ Attaccanti": "A"}
+                if filtro_ruolo_wl in mappa_filtro:
+                    df_wl = df_wl[df_wl["Ruolo"] == mappa_filtro[filtro_ruolo_wl]]
+
+                if df_wl.empty:
+                    st.caption("Nessun giocatore per questo filtro.")
+                elif vista_wl == "📋 Tabella":
+                    df_tab = df_wl.copy()
+                    df_tab["Proprietario"] = df_tab["Nome"].apply(lambda n: idx_wl.get(str(n).lower(), "Svincolato 🟢"))
+                    cols_tab = [c for c in ["Nome", "Ruolo", "Squadra_SerieA", "Quotazione", "Prezzo_AI", "Delta_AI", "FantaMedia", "ValueScore", "Proprietario"] if c in df_tab.columns]
+                    df_tab = df_tab[cols_tab]
+                    max_vs_wl = float(df_tab["ValueScore"].max()) if "ValueScore" in df_tab.columns and len(df_tab) else 1.0
+                    st.dataframe(
+                        df_tab, use_container_width=True, hide_index=True,
+                        column_config={
+                            "Squadra_SerieA": st.column_config.TextColumn("Squadra"),
+                            "Prezzo_AI": st.column_config.NumberColumn("Prezzo AI", format="%d cr"),
+                            "Quotazione": st.column_config.NumberColumn("Quot.", format="%d cr"),
+                            "Delta_AI": st.column_config.NumberColumn("Δ AI", format="%+d cr", help="Prezzo AI - Quotazione (positivo = affare)"),
+                            "ValueScore": st.column_config.ProgressColumn("Value", min_value=0, max_value=max(1.0, max_vs_wl), format="%.1f"),
+                        },
+                    )
+                    rc1, rc2 = st.columns([3, 1])
+                    with rc1:
+                        da_rimuovere = st.multiselect("Rimuovi dalla watchlist", list(df_wl["Nome"]), key="wl_rm_tab")
+                    with rc2:
+                        st.write("")
+                        st.write("")
+                        if st.button("❌ Rimuovi", use_container_width=True, key="wl_rm_tab_btn") and da_rimuovere:
+                            st.session_state.watchlist = [g for g in st.session_state.watchlist if g not in da_rimuovere]
+                            save_state()
+                            st.rerun()
+                else:
+                    def _render_card_wl(row_wl):
+                        rdict = row_wl.to_dict()
+                        rdict["Proprietario"] = idx_wl.get(str(rdict.get("Nome", "")).lower(), "Svincolato 🟢")
+                        if pd.isna(rdict.get("Indice_Affare")):
+                            rdict["Indice_Affare"] = round(float(rdict.get("FantaMedia", 6.0)) / max(float(rdict.get("Quotazione", 1)), 1), 2)
+                        if pd.isna(rdict.get("Indice_Titolarita")):
+                            rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_wl)
+                        st.markdown(render_flip_card(rdict, stats_ps_wl, stats_2627_wl), unsafe_allow_html=True)
+                        nome_wl = str(rdict.get("Nome", ""))
+                        if st.button("❌ Rimuovi", key=f"wl_rm_{nome_wl}", help=f"Rimuovi {nome_wl}", use_container_width=True):
+                            st.session_state.watchlist = [g for g in st.session_state.watchlist if g != nome_wl]
+                            save_state()
+                            st.rerun()
+
+                    if filtro_ruolo_wl in mappa_filtro:
+                        cols_grid = st.columns(4)
+                        for i, (_, row_wl) in enumerate(df_wl.iterrows()):
+                            with cols_grid[i % 4]:
+                                _render_card_wl(row_wl)
+                    else:
+                        cols_wl = st.columns(4)
+                        for idx_r, ruolo in enumerate(["P", "D", "C", "A"]):
+                            with cols_wl[idx_r]:
+                                st.markdown(f"<div style='color:{colori_ruolo_wl[ruolo]};font-weight:700;text-align:center;margin-bottom:4px;'>{ruoli_nomi_wl[ruolo]}</div>", unsafe_allow_html=True)
+                                df_r_wl = df_wl[df_wl["Ruolo"] == ruolo]
+                                if not df_r_wl.empty:
+                                    for _, row_wl in df_r_wl.iterrows():
+                                        _render_card_wl(row_wl)
+                                else:
+                                    st.caption("Nessuno")
 
 # ============================================================
 # 2. ASTA LIVE
