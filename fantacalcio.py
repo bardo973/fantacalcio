@@ -1750,6 +1750,7 @@ def _build_stats_html(nome, stats_per_stagione):
 
     r = match.iloc[0]
     gol_fatti = _stat_value(r, ["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti", "GF", "I gF", "Reti fatte"])
+    assist = _stat_value(r, ["Assist", "Assists", "Assist fatti", "Ass", "Passaggi vincenti"])
     gol_subiti = _stat_value(r, ["Gol subiti", "Goal subiti", "GS", "I GS", "Reti subite"])
     ammonizioni = _stat_value(r, ["Ammonizioni", "Cartellini gialli", "Gialli", "Amm"])
     espulsioni = _stat_value(r, ["Espulsioni", "Cartellini rossi", "Rossi", "Esp"])
@@ -1758,6 +1759,7 @@ def _build_stats_html(nome, stats_per_stagione):
 
     stats = [
         ("⚽", "Gol fatti", gol_fatti, "#00d26a"),
+        ("🎯", "Assist", assist, "#38bdf8"),
         ("🥅", "Gol subiti", gol_subiti, "#ef4444"),
         ("🟨", "Ammonizioni", ammonizioni, "#eab308"),
         ("🟥", "Espulsioni", espulsioni, "#ef4444"),
