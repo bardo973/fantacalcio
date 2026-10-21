@@ -376,85 +376,85 @@ st.markdown("""
 # LISTONE DEFAULT
 # ============================================================
 LISTONE_DEFAULT = [
-    {"Nome":"Svilar","Ruolo":"P","Squadra_SerieA":"Roma","Quotazione":38,"FantaMedia":6.0,"Consiglio":"top","Note":"18 clean sheet, fantamedia 6, media voto 6.35", "Quotazione_2025_26":35, "Prezzo_Consigliato":47},
-    {"Nome":"Carnesecchi","Ruolo":"P","Squadra_SerieA":"Atalanta","Quotazione":34,"FantaMedia":6.1,"Consiglio":"top","Note":"13 clean sheet, media voto 6.5, con Sarri può migliorare", "Quotazione_2025_26":34, "Prezzo_Consigliato":42},
-    {"Nome":"Maignan","Ruolo":"P","Squadra_SerieA":"Milan","Quotazione":34,"FantaMedia":5.9,"Consiglio":"top","Note":"13 clean sheet, 2 rigori parati, affidabile", "Quotazione_2025_26":29, "Prezzo_Consigliato":41},
-    {"Nome":"Butez","Ruolo":"P","Squadra_SerieA":"Como","Quotazione":32,"FantaMedia":5.8,"Consiglio":"top","Note":"19 clean sheet, miglior difesa del campionato", "Quotazione_2025_26":32, "Prezzo_Consigliato":36},
-    {"Nome":"Martinez","Ruolo":"P","Squadra_SerieA":"Inter","Quotazione":29,"FantaMedia":5.7,"Consiglio":"consigliato","Note":"Nuovo titolare, ex Genoa, fiducia Chivu", "Quotazione_2025_26":23, "Prezzo_Consigliato":32},
-    {"Nome":"Meret","Ruolo":"P","Squadra_SerieA":"Napoli","Quotazione":30,"FantaMedia":5.8,"Consiglio":"consigliato","Note":"Titolare con Allegri, sottovalutato, ottimo rapporto qualità-prezzo", "Quotazione_2025_26":31, "Prezzo_Consigliato":33},
-    {"Nome":"De Gea","Ruolo":"P","Squadra_SerieA":"Fiorentina","Quotazione":24,"FantaMedia":5.6,"Consiglio":"consigliato","Note":"Stagione del riscatto, hype sceso, low risk", "Quotazione_2025_26":26, "Prezzo_Consigliato":26},
-    {"Nome":"Vicario","Ruolo":"P","Squadra_SerieA":"Juventus","Quotazione":28,"FantaMedia":5.7,"Consiglio":"consigliato","Note":"Nuovo titolare, ex Empoli, top assoluto in Serie A", "Quotazione_2025_26":15, "Prezzo_Consigliato":32},
-    {"Nome":"Mandas","Ruolo":"P","Squadra_SerieA":"Lazio","Quotazione":22,"FantaMedia":5.5,"Consiglio":"consigliato","Note":"Titolare con Gattuso, portiere da modificatore", "Quotazione_2025_26":12, "Prezzo_Consigliato":23},
-    {"Nome":"Falcone","Ruolo":"P","Squadra_SerieA":"Lecce","Quotazione":17,"FantaMedia":5.5,"Consiglio":"scommessa","Note":"Media voto 6.41, low cost, garanzia voti alti", "Quotazione_2025_26":5, "Prezzo_Consigliato":14},
-    {"Nome":"Stankovic","Ruolo":"P","Squadra_SerieA":"Venezia","Quotazione":13,"FantaMedia":5.3,"Consiglio":"scommessa","Note":"Torna in Serie A, potenziale sorpresa", "Quotazione_2025_26":6, "Prezzo_Consigliato":11},
-    {"Nome":"Corvi","Ruolo":"P","Squadra_SerieA":"Parma","Quotazione":12,"FantaMedia":5.4,"Consiglio":"scommessa","Note":"Nuovo titolare, aveva fatto vedere buone cose", "Quotazione_2025_26":4, "Prezzo_Consigliato":10},
-    {"Nome":"Caprile","Ruolo":"P","Squadra_SerieA":"Cagliari","Quotazione":10,"FantaMedia":5.3,"Consiglio":"scommessa","Note":"Buon portiere da modificatore, low cost", "Quotazione_2025_26":3, "Prezzo_Consigliato":8},
-    {"Nome":"Dimarco","Ruolo":"D","Squadra_SerieA":"Inter","Quotazione":45,"FantaMedia":7.2,"Consiglio":"top","Note":"Top assoluto, vale un +3 a giornata, irraggiungibile", "Quotazione_2025_26":39, "Prezzo_Consigliato":59},
-    {"Nome":"Bremer","Ruolo":"D","Squadra_SerieA":"Juventus","Quotazione":38,"FantaMedia":6.9,"Consiglio":"top","Note":"4 gol, 3 assist, fantamedia alta, primo slot", "Quotazione_2025_26":34, "Prezzo_Consigliato":48},
-    {"Nome":"Bisseck","Ruolo":"D","Squadra_SerieA":"Inter","Quotazione":35,"FantaMedia":6.8,"Consiglio":"top","Note":"Voti alti e bonus, può diventare top", "Quotazione_2025_26":34, "Prezzo_Consigliato":43},
-    {"Nome":"Mancini","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":32,"FantaMedia":6.7,"Consiglio":"top","Note":"4 gol, leader difesa Gasperini, solido", "Quotazione_2025_26":27, "Prezzo_Consigliato":39},
-    {"Nome":"Wesley","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":28,"FantaMedia":6.6,"Consiglio":"top","Note":"5 gol, potenziale stagione alla Gosens", "Quotazione_2025_26":25, "Prezzo_Consigliato":33},
-    {"Nome":"Pavlovic","Ruolo":"D","Squadra_SerieA":"Milan","Quotazione":33,"FantaMedia":6.5,"Consiglio":"consigliato","Note":"5 gol, media 6.24, centrale prolifico", "Quotazione_2025_26":33, "Prezzo_Consigliato":39},
-    {"Nome":"Ostigard","Ruolo":"D","Squadra_SerieA":"Napoli","Quotazione":28,"FantaMedia":6.4,"Consiglio":"consigliato","Note":"5 gol, centrale prolifico, solido", "Quotazione_2025_26":26, "Prezzo_Consigliato":32},
-    {"Nome":"Cambiaso","Ruolo":"D","Squadra_SerieA":"Juventus","Quotazione":29,"FantaMedia":6.6,"Consiglio":"consigliato","Note":"3 gol, 4 assist, titolare a sinistra", "Quotazione_2025_26":23, "Prezzo_Consigliato":34},
-    {"Nome":"Spinazzola","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":27,"FantaMedia":6.3,"Consiglio":"consigliato","Note":"Sottovalutato, bonus garantiti, media buona", "Quotazione_2025_26":26, "Prezzo_Consigliato":31},
-    {"Nome":"Zappacosta","Ruolo":"D","Squadra_SerieA":"Atalanta","Quotazione":32,"FantaMedia":6.7,"Consiglio":"consigliato","Note":"Gran gamba, qualità offensiva, bonus sicuri", "Quotazione_2025_26":34, "Prezzo_Consigliato":39},
-    {"Nome":"Di Lorenzo","Ruolo":"D","Squadra_SerieA":"Napoli","Quotazione":26,"FantaMedia":6.4,"Consiglio":"consigliato","Note":"Sempre buona chiamata, 6-7 bonus potenziali", "Quotazione_2025_26":24, "Prezzo_Consigliato":30},
-    {"Nome":"Kempf","Ruolo":"D","Squadra_SerieA":"Como","Quotazione":20,"FantaMedia":6.2,"Consiglio":"consigliato","Note":"Certezza, voti e bonus, solido", "Quotazione_2025_26":14, "Prezzo_Consigliato":22},
-    {"Nome":"Stones","Ruolo":"D","Squadra_SerieA":"Inter","Quotazione":30,"FantaMedia":6.5,"Consiglio":"consigliato","Note":"Ex City, rotazioni Chivu, minutaggio garantito", "Quotazione_2025_26":21, "Prezzo_Consigliato":35},
-    {"Nome":"Rensch","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":18,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"1 gol, 4 assist in 19 partite, può esplodere", "Quotazione_2025_26":11, "Prezzo_Consigliato":15},
-    {"Nome":"Doekhi","Ruolo":"D","Squadra_SerieA":"Lazio","Quotazione":22,"FantaMedia":6.2,"Consiglio":"scommessa","Note":"7 gol in Europa, sostituto Gila, centrale prolifico", "Quotazione_2025_26":12, "Prezzo_Consigliato":19},
-    {"Nome":"Jimenez","Ruolo":"D","Squadra_SerieA":"Fiorentina","Quotazione":21,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"Torna in Serie A, jolly tattico, può giocare ovunque", "Quotazione_2025_26":8, "Prezzo_Consigliato":18},
-    {"Nome":"Kaiki","Ruolo":"D","Squadra_SerieA":"Como","Quotazione":14,"FantaMedia":5.9,"Consiglio":"scommessa","Note":"Nuovo titolare sinistra, terzino di spinta", "Quotazione_2025_26":4, "Prezzo_Consigliato":11},
-    {"Nome":"Çelik","Ruolo":"D","Squadra_SerieA":"Juventus","Quotazione":19,"FantaMedia":6.0,"Consiglio":"scommessa","Note":"Duttile, Spalletti può schierarlo in varie occasioni", "Quotazione_2025_26":10, "Prezzo_Consigliato":16},
-    {"Nome":"Pulisic","Ruolo":"C","Squadra_SerieA":"Milan","Quotazione":57,"FantaMedia":7.8,"Consiglio":"top","Note":"Cambio ruolo, più appetibile, potenziale doppia-doppia", "Quotazione_2025_26":53, "Prezzo_Consigliato":71},
-    {"Nome":"Orsolini","Ruolo":"C","Squadra_SerieA":"Bologna","Quotazione":53,"FantaMedia":7.6,"Consiglio":"top","Note":"Cambio ruolo, bonus garantiti, doppia cifra potenziale", "Quotazione_2025_26":46, "Prezzo_Consigliato":64},
-    {"Nome":"McTominay","Ruolo":"C","Squadra_SerieA":"Napoli","Quotazione":50,"FantaMedia":7.4,"Consiglio":"top","Note":"Doppia cifra, sposta gli equilibri, top", "Quotazione_2025_26":42, "Prezzo_Consigliato":59},
-    {"Nome":"Nico Paz","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":48,"FantaMedia":7.3,"Consiglio":"top","Note":"Doppia cifra, top assoluto, crescita esponenziale", "Quotazione_2025_26":35, "Prezzo_Consigliato":59},
-    {"Nome":"Calhanoglu","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":43,"FantaMedia":7.1,"Consiglio":"top","Note":"9 gol, media voto >6.5, migliore del reparto", "Quotazione_2025_26":40, "Prezzo_Consigliato":48},
-    {"Nome":"Rabiot","Ruolo":"C","Squadra_SerieA":"Milan","Quotazione":42,"FantaMedia":7.0,"Consiglio":"top","Note":"6 gol, 4 assist, con Allegri era il migliore", "Quotazione_2025_26":38, "Prezzo_Consigliato":46},
-    {"Nome":"Vlasic","Ruolo":"C","Squadra_SerieA":"Torino","Quotazione":52,"FantaMedia":7.4,"Consiglio":"consigliato","Note":"8 gol, 3 assist, rigorista, garanzia", "Quotazione_2025_26":39, "Prezzo_Consigliato":61},
-    {"Nome":"Frattesi","Ruolo":"C","Squadra_SerieA":"Lazio","Quotazione":48,"FantaMedia":7.5,"Consiglio":"consigliato","Note":"Potenziale top, alla Milinkovic-Savic, può esplodere", "Quotazione_2025_26":52, "Prezzo_Consigliato":60},
-    {"Nome":"Zaniolo","Ruolo":"C","Squadra_SerieA":"Udinese","Quotazione":48,"FantaMedia":7.3,"Consiglio":"consigliato","Note":"5 gol, 6 assist, attaccante aggiunto", "Quotazione_2025_26":52, "Prezzo_Consigliato":59},
-    {"Nome":"Modric","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":43,"FantaMedia":7.1,"Consiglio":"consigliato","Note":"Rendimento garantito, media >6.5, esperienza", "Quotazione_2025_26":42, "Prezzo_Consigliato":48},
-    {"Nome":"Koné","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":40,"FantaMedia":6.9,"Consiglio":"consigliato","Note":"Media 6.26, mai sotto sufficienza, solido", "Quotazione_2025_26":43, "Prezzo_Consigliato":43},
-    {"Nome":"De Bruyne","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":46,"FantaMedia":7.2,"Consiglio":"consigliato","Note":"Se sta bene fa la differenza, calcia rigori", "Quotazione_2025_26":48, "Prezzo_Consigliato":56},
-    {"Nome":"Barella","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":44,"FantaMedia":7.0,"Consiglio":"consigliato","Note":"Sempre Barella, secondo slot ideale, affidabile", "Quotazione_2025_26":41, "Prezzo_Consigliato":48},
-    {"Nome":"Bernardeschi","Ruolo":"C","Squadra_SerieA":"Bologna","Quotazione":38,"FantaMedia":6.8,"Consiglio":"consigliato","Note":"Da prendere con Rowe, coppia ideale", "Quotazione_2025_26":36, "Prezzo_Consigliato":40},
-    {"Nome":"Rowe","Ruolo":"C","Squadra_SerieA":"Bologna","Quotazione":36,"FantaMedia":6.7,"Consiglio":"consigliato","Note":"3 gol, 3 assist, può crescere", "Quotazione_2025_26":41, "Prezzo_Consigliato":34},
-    {"Nome":"Thorstvedt","Ruolo":"C","Squadra_SerieA":"Sassuolo","Quotazione":30,"FantaMedia":6.5,"Consiglio":"consigliato","Note":"5-6 gol potenziali, buon rapporto", "Quotazione_2025_26":26, "Prezzo_Consigliato":29},
-    {"Nome":"Perrone","Ruolo":"C","Squadra_SerieA":"Como","Quotazione":35,"FantaMedia":6.7,"Consiglio":"consigliato","Note":"3 gol, 4 assist, voti alti, sottovalutato", "Quotazione_2025_26":36, "Prezzo_Consigliato":33},
-    {"Nome":"Alajbegovic","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":33,"FantaMedia":6.6,"Consiglio":"scommessa","Note":"Talentino trequarti, attenzione hype, può fare bene", "Quotazione_2025_26":16, "Prezzo_Consigliato":26},
-    {"Nome":"Douglas Luiz","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":22,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"Intenzionato a restare, può tornare ai livelli di 2 anni fa", "Quotazione_2025_26":18, "Prezzo_Consigliato":17},
-    {"Nome":"Gaetano","Ruolo":"C","Squadra_SerieA":"Atalanta","Quotazione":19,"FantaMedia":6.2,"Consiglio":"scommessa","Note":"Sarri lo vuole, grande intuizione", "Quotazione_2025_26":12, "Prezzo_Consigliato":15},
-    {"Nome":"Stankovic A.","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":18,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"Fiducia Chivu, sostituto Calhanoglu", "Quotazione_2025_26":10, "Prezzo_Consigliato":14},
-    {"Nome":"Calò","Ruolo":"C","Squadra_SerieA":"Frosinone","Quotazione":22,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"10 gol, 14 assist in Serie B, grande salto", "Quotazione_2025_26":14, "Prezzo_Consigliato":17},
-    {"Nome":"Milla","Ruolo":"C","Squadra_SerieA":"Como","Quotazione":20,"FantaMedia":6.4,"Consiglio":"scommessa","Note":"Solo Yamal più assist in Liga, possibile crack", "Quotazione_2025_26":10, "Prezzo_Consigliato":16},
-    {"Nome":"Liberali","Ruolo":"C","Squadra_SerieA":"Como","Quotazione":18,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"Giovane dal grande potenziale, spazio con Champions", "Quotazione_2025_26":8, "Prezzo_Consigliato":14},
-    {"Nome":"Lautaro","Ruolo":"A","Squadra_SerieA":"Inter","Quotazione":88,"FantaMedia":8.5,"Consiglio":"top","Note":"Capocannoniere 17 gol, 6 assist, primo slot assoluto", "Quotazione_2025_26":90, "Prezzo_Consigliato":109},
-    {"Nome":"Malen","Ruolo":"A","Squadra_SerieA":"Roma","Quotazione":84,"FantaMedia":8.2,"Consiglio":"top","Note":"Vice-cannoniere 14 gol, sposta gli equilibri", "Quotazione_2025_26":72, "Prezzo_Consigliato":100},
-    {"Nome":"Thuram","Ruolo":"A","Squadra_SerieA":"Inter","Quotazione":74,"FantaMedia":7.9,"Consiglio":"top","Note":"13 gol, 6 assist, primo slot nonostante annata deludente", "Quotazione_2025_26":67, "Prezzo_Consigliato":85},
-    {"Nome":"Hojlund","Ruolo":"A","Squadra_SerieA":"Napoli","Quotazione":78,"FantaMedia":8.0,"Consiglio":"top","Note":"Tornato in Serie A, obiettivo 15 gol, Allegri punta forte", "Quotazione_2025_26":72, "Prezzo_Consigliato":91},
-    {"Nome":"Goncalo Ramos","Ruolo":"A","Squadra_SerieA":"Milan","Quotazione":78,"FantaMedia":8.0,"Consiglio":"top","Note":"Colpo da 70M, titolare Amorim, può superare doppia cifra", "Quotazione_2025_26":68, "Prezzo_Consigliato":91},
-    {"Nome":"Kolo Muani","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":76,"FantaMedia":7.9,"Consiglio":"top","Note":"Tornato alla Juve, Spalletti lo vuole, garanzia", "Quotazione_2025_26":69, "Prezzo_Consigliato":87},
-    {"Nome":"Leao","Ruolo":"A","Squadra_SerieA":"Milan","Quotazione":72,"FantaMedia":7.8,"Consiglio":"top","Note":"Prima fascia, può migliorare, talento puro", "Quotazione_2025_26":65, "Prezzo_Consigliato":81},
-    {"Nome":"Kean","Ruolo":"A","Squadra_SerieA":"Fiorentina","Quotazione":65,"FantaMedia":7.5,"Consiglio":"consigliato","Note":"Doppia cifra garantita, solido", "Quotazione_2025_26":48, "Prezzo_Consigliato":66},
-    {"Nome":"Yildiz","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":70,"FantaMedia":7.7,"Consiglio":"consigliato","Note":"10 gol, 6 assist, centro progetto, può esplodere", "Quotazione_2025_26":58, "Prezzo_Consigliato":78},
-    {"Nome":"Douvikas","Ruolo":"A","Squadra_SerieA":"Como","Quotazione":65,"FantaMedia":7.8,"Consiglio":"consigliato","Note":"14 gol, sorpresa 2024-25, doppia cifra sicura", "Quotazione_2025_26":64, "Prezzo_Consigliato":68},
-    {"Nome":"Dybala","Ruolo":"A","Squadra_SerieA":"Roma","Quotazione":58,"FantaMedia":7.4,"Consiglio":"consigliato","Note":"Sempre utile, momento della differenza, clutch", "Quotazione_2025_26":50, "Prezzo_Consigliato":58},
-    {"Nome":"Davis","Ruolo":"A","Squadra_SerieA":"Udinese","Quotazione":61,"FantaMedia":7.5,"Consiglio":"consigliato","Note":"10 gol, rigorista, garanzia bonus", "Quotazione_2025_26":53, "Prezzo_Consigliato":61},
-    {"Nome":"Scamacca","Ruolo":"A","Squadra_SerieA":"Atalanta","Quotazione":55,"FantaMedia":7.3,"Consiglio":"consigliato","Note":"Attenzione infortuni, ma potenziale top", "Quotazione_2025_26":44, "Prezzo_Consigliato":54},
-    {"Nome":"Simeone","Ruolo":"A","Squadra_SerieA":"Napoli","Quotazione":50,"FantaMedia":7.2,"Consiglio":"consigliato","Note":"11 gol, conferma, affidabile", "Quotazione_2025_26":41, "Prezzo_Consigliato":48},
-    {"Nome":"Dovbyk","Ruolo":"A","Squadra_SerieA":"Bologna","Quotazione":48,"FantaMedia":7.1,"Consiglio":"consigliato","Note":"Doppia cifra a Bologna, solido", "Quotazione_2025_26":54, "Prezzo_Consigliato":45},
-    {"Nome":"Colombo","Ruolo":"A","Squadra_SerieA":"Roma","Quotazione":35,"FantaMedia":6.8,"Consiglio":"consigliato","Note":"7 gol, obiettivo doppia cifra, può crescere", "Quotazione_2025_26":35, "Prezzo_Consigliato":30},
-    {"Nome":"Yeboah","Ruolo":"A","Squadra_SerieA":"Venezia","Quotazione":24,"FantaMedia":6.5,"Consiglio":"scommessa","Note":"Doppia cifra in Serie B, convocato al Mondiale", "Quotazione_2025_26":12, "Prezzo_Consigliato":17},
-    {"Nome":"Bowie","Ruolo":"A","Squadra_SerieA":"Sassuolo","Quotazione":25,"FantaMedia":6.4,"Consiglio":"scommessa","Note":"Ex Verona, goal in Serie A li sa fare", "Quotazione_2025_26":14, "Prezzo_Consigliato":18},
-    {"Nome":"Alajbegovic K.","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":33,"FantaMedia":6.7,"Consiglio":"scommessa","Note":"Colpo di mercato, trequarti, attenzione hype", "Quotazione_2025_26":17, "Prezzo_Consigliato":25},
-    {"Nome":"Rrahmani","Ruolo":"A","Squadra_SerieA":"Venezia","Quotazione":22,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"15 gol in Rep. Ceca, nuovo attaccante titolare", "Quotazione_2025_26":8, "Prezzo_Consigliato":15},
-    {"Nome":"Ekhator","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":20,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"Low cost, potenziale, parte dietro nelle gerarchie", "Quotazione_2025_26":7, "Prezzo_Consigliato":14},
-    {"Nome":"Mendy","Ruolo":"A","Squadra_SerieA":"Cagliari","Quotazione":15,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"2 gol in 8 partite, 2007, può esplodere", "Quotazione_2025_26":9, "Prezzo_Consigliato":10},
-    {"Nome":"Camarda","Ruolo":"A","Squadra_SerieA":"Milan","Quotazione":12,"FantaMedia":6.0,"Consiglio":"scommessa","Note":"Vice Ramos, a 1 credito ci sta", "Quotazione_2025_26":4, "Prezzo_Consigliato":8},
-    {"Nome":"Ratkov","Ruolo":"A","Squadra_SerieA":"Lazio","Quotazione":20,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"Gattuso lo rilancia, puntatina senza esagerare", "Quotazione_2025_26":8, "Prezzo_Consigliato":14},
+    {"Nome":"Svilar","Ruolo":"P","Squadra_SerieA":"Roma","Quotazione":38,"FantaMedia":6.0,"Consiglio":"top","Note":"18 clean sheet, fantamedia 6, media voto 6.35", "Quotazione_2025_26":35, "Prezzo_Consigliato":None},
+    {"Nome":"Carnesecchi","Ruolo":"P","Squadra_SerieA":"Atalanta","Quotazione":34,"FantaMedia":6.1,"Consiglio":"top","Note":"13 clean sheet, media voto 6.5, con Sarri può migliorare", "Quotazione_2025_26":34, "Prezzo_Consigliato":None},
+    {"Nome":"Maignan","Ruolo":"P","Squadra_SerieA":"Milan","Quotazione":34,"FantaMedia":5.9,"Consiglio":"top","Note":"13 clean sheet, 2 rigori parati, affidabile", "Quotazione_2025_26":29, "Prezzo_Consigliato":None},
+    {"Nome":"Butez","Ruolo":"P","Squadra_SerieA":"Como","Quotazione":32,"FantaMedia":5.8,"Consiglio":"top","Note":"19 clean sheet, miglior difesa del campionato", "Quotazione_2025_26":32, "Prezzo_Consigliato":None},
+    {"Nome":"Martinez","Ruolo":"P","Squadra_SerieA":"Inter","Quotazione":29,"FantaMedia":5.7,"Consiglio":"consigliato","Note":"Nuovo titolare, ex Genoa, fiducia Chivu", "Quotazione_2025_26":23, "Prezzo_Consigliato":None},
+    {"Nome":"Meret","Ruolo":"P","Squadra_SerieA":"Napoli","Quotazione":30,"FantaMedia":5.8,"Consiglio":"consigliato","Note":"Titolare con Allegri, sottovalutato, ottimo rapporto qualità-prezzo", "Quotazione_2025_26":31, "Prezzo_Consigliato":None},
+    {"Nome":"De Gea","Ruolo":"P","Squadra_SerieA":"Fiorentina","Quotazione":24,"FantaMedia":5.6,"Consiglio":"consigliato","Note":"Stagione del riscatto, hype sceso, low risk", "Quotazione_2025_26":26, "Prezzo_Consigliato":None},
+    {"Nome":"Vicario","Ruolo":"P","Squadra_SerieA":"Juventus","Quotazione":28,"FantaMedia":5.7,"Consiglio":"consigliato","Note":"Nuovo titolare, ex Empoli, top assoluto in Serie A", "Quotazione_2025_26":15, "Prezzo_Consigliato":None},
+    {"Nome":"Mandas","Ruolo":"P","Squadra_SerieA":"Lazio","Quotazione":22,"FantaMedia":5.5,"Consiglio":"consigliato","Note":"Titolare con Gattuso, portiere da modificatore", "Quotazione_2025_26":12, "Prezzo_Consigliato":None},
+    {"Nome":"Falcone","Ruolo":"P","Squadra_SerieA":"Lecce","Quotazione":17,"FantaMedia":5.5,"Consiglio":"scommessa","Note":"Media voto 6.41, low cost, garanzia voti alti", "Quotazione_2025_26":5, "Prezzo_Consigliato":None},
+    {"Nome":"Stankovic","Ruolo":"P","Squadra_SerieA":"Venezia","Quotazione":13,"FantaMedia":5.3,"Consiglio":"scommessa","Note":"Torna in Serie A, potenziale sorpresa", "Quotazione_2025_26":6, "Prezzo_Consigliato":None},
+    {"Nome":"Corvi","Ruolo":"P","Squadra_SerieA":"Parma","Quotazione":12,"FantaMedia":5.4,"Consiglio":"scommessa","Note":"Nuovo titolare, aveva fatto vedere buone cose", "Quotazione_2025_26":4, "Prezzo_Consigliato":None},
+    {"Nome":"Caprile","Ruolo":"P","Squadra_SerieA":"Cagliari","Quotazione":10,"FantaMedia":5.3,"Consiglio":"scommessa","Note":"Buon portiere da modificatore, low cost", "Quotazione_2025_26":3, "Prezzo_Consigliato":None},
+    {"Nome":"Dimarco","Ruolo":"D","Squadra_SerieA":"Inter","Quotazione":45,"FantaMedia":7.2,"Consiglio":"top","Note":"Top assoluto, vale un +3 a giornata, irraggiungibile", "Quotazione_2025_26":39, "Prezzo_Consigliato":None},
+    {"Nome":"Bremer","Ruolo":"D","Squadra_SerieA":"Juventus","Quotazione":38,"FantaMedia":6.9,"Consiglio":"top","Note":"4 gol, 3 assist, fantamedia alta, primo slot", "Quotazione_2025_26":34, "Prezzo_Consigliato":None},
+    {"Nome":"Bisseck","Ruolo":"D","Squadra_SerieA":"Inter","Quotazione":35,"FantaMedia":6.8,"Consiglio":"top","Note":"Voti alti e bonus, può diventare top", "Quotazione_2025_26":34, "Prezzo_Consigliato":None},
+    {"Nome":"Mancini","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":32,"FantaMedia":6.7,"Consiglio":"top","Note":"4 gol, leader difesa Gasperini, solido", "Quotazione_2025_26":27, "Prezzo_Consigliato":None},
+    {"Nome":"Wesley","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":28,"FantaMedia":6.6,"Consiglio":"top","Note":"5 gol, potenziale stagione alla Gosens", "Quotazione_2025_26":25, "Prezzo_Consigliato":None},
+    {"Nome":"Pavlovic","Ruolo":"D","Squadra_SerieA":"Milan","Quotazione":33,"FantaMedia":6.5,"Consiglio":"consigliato","Note":"5 gol, media 6.24, centrale prolifico", "Quotazione_2025_26":33, "Prezzo_Consigliato":None},
+    {"Nome":"Ostigard","Ruolo":"D","Squadra_SerieA":"Napoli","Quotazione":28,"FantaMedia":6.4,"Consiglio":"consigliato","Note":"5 gol, centrale prolifico, solido", "Quotazione_2025_26":26, "Prezzo_Consigliato":None},
+    {"Nome":"Cambiaso","Ruolo":"D","Squadra_SerieA":"Juventus","Quotazione":29,"FantaMedia":6.6,"Consiglio":"consigliato","Note":"3 gol, 4 assist, titolare a sinistra", "Quotazione_2025_26":23, "Prezzo_Consigliato":None},
+    {"Nome":"Spinazzola","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":27,"FantaMedia":6.3,"Consiglio":"consigliato","Note":"Sottovalutato, bonus garantiti, media buona", "Quotazione_2025_26":26, "Prezzo_Consigliato":None},
+    {"Nome":"Zappacosta","Ruolo":"D","Squadra_SerieA":"Atalanta","Quotazione":32,"FantaMedia":6.7,"Consiglio":"consigliato","Note":"Gran gamba, qualità offensiva, bonus sicuri", "Quotazione_2025_26":34, "Prezzo_Consigliato":None},
+    {"Nome":"Di Lorenzo","Ruolo":"D","Squadra_SerieA":"Napoli","Quotazione":26,"FantaMedia":6.4,"Consiglio":"consigliato","Note":"Sempre buona chiamata, 6-7 bonus potenziali", "Quotazione_2025_26":24, "Prezzo_Consigliato":None},
+    {"Nome":"Kempf","Ruolo":"D","Squadra_SerieA":"Como","Quotazione":20,"FantaMedia":6.2,"Consiglio":"consigliato","Note":"Certezza, voti e bonus, solido", "Quotazione_2025_26":14, "Prezzo_Consigliato":None},
+    {"Nome":"Stones","Ruolo":"D","Squadra_SerieA":"Inter","Quotazione":30,"FantaMedia":6.5,"Consiglio":"consigliato","Note":"Ex City, rotazioni Chivu, minutaggio garantito", "Quotazione_2025_26":21, "Prezzo_Consigliato":None},
+    {"Nome":"Rensch","Ruolo":"D","Squadra_SerieA":"Roma","Quotazione":18,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"1 gol, 4 assist in 19 partite, può esplodere", "Quotazione_2025_26":11, "Prezzo_Consigliato":None},
+    {"Nome":"Doekhi","Ruolo":"D","Squadra_SerieA":"Lazio","Quotazione":22,"FantaMedia":6.2,"Consiglio":"scommessa","Note":"7 gol in Europa, sostituto Gila, centrale prolifico", "Quotazione_2025_26":12, "Prezzo_Consigliato":None},
+    {"Nome":"Jimenez","Ruolo":"D","Squadra_SerieA":"Fiorentina","Quotazione":21,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"Torna in Serie A, jolly tattico, può giocare ovunque", "Quotazione_2025_26":8, "Prezzo_Consigliato":None},
+    {"Nome":"Kaiki","Ruolo":"D","Squadra_SerieA":"Como","Quotazione":14,"FantaMedia":5.9,"Consiglio":"scommessa","Note":"Nuovo titolare sinistra, terzino di spinta", "Quotazione_2025_26":4, "Prezzo_Consigliato":None},
+    {"Nome":"Çelik","Ruolo":"D","Squadra_SerieA":"Juventus","Quotazione":19,"FantaMedia":6.0,"Consiglio":"scommessa","Note":"Duttile, Spalletti può schierarlo in varie occasioni", "Quotazione_2025_26":10, "Prezzo_Consigliato":None},
+    {"Nome":"Pulisic","Ruolo":"C","Squadra_SerieA":"Milan","Quotazione":57,"FantaMedia":7.8,"Consiglio":"top","Note":"Cambio ruolo, più appetibile, potenziale doppia-doppia", "Quotazione_2025_26":53, "Prezzo_Consigliato":None},
+    {"Nome":"Orsolini","Ruolo":"C","Squadra_SerieA":"Bologna","Quotazione":53,"FantaMedia":7.6,"Consiglio":"top","Note":"Cambio ruolo, bonus garantiti, doppia cifra potenziale", "Quotazione_2025_26":46, "Prezzo_Consigliato":None},
+    {"Nome":"McTominay","Ruolo":"C","Squadra_SerieA":"Napoli","Quotazione":50,"FantaMedia":7.4,"Consiglio":"top","Note":"Doppia cifra, sposta gli equilibri, top", "Quotazione_2025_26":42, "Prezzo_Consigliato":None},
+    {"Nome":"Nico Paz","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":48,"FantaMedia":7.3,"Consiglio":"top","Note":"Doppia cifra, top assoluto, crescita esponenziale", "Quotazione_2025_26":35, "Prezzo_Consigliato":None},
+    {"Nome":"Calhanoglu","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":43,"FantaMedia":7.1,"Consiglio":"top","Note":"9 gol, media voto >6.5, migliore del reparto", "Quotazione_2025_26":40, "Prezzo_Consigliato":None},
+    {"Nome":"Rabiot","Ruolo":"C","Squadra_SerieA":"Milan","Quotazione":42,"FantaMedia":7.0,"Consiglio":"top","Note":"6 gol, 4 assist, con Allegri era il migliore", "Quotazione_2025_26":38, "Prezzo_Consigliato":None},
+    {"Nome":"Vlasic","Ruolo":"C","Squadra_SerieA":"Torino","Quotazione":52,"FantaMedia":7.4,"Consiglio":"consigliato","Note":"8 gol, 3 assist, rigorista, garanzia", "Quotazione_2025_26":39, "Prezzo_Consigliato":None},
+    {"Nome":"Frattesi","Ruolo":"C","Squadra_SerieA":"Lazio","Quotazione":48,"FantaMedia":7.5,"Consiglio":"consigliato","Note":"Potenziale top, alla Milinkovic-Savic, può esplodere", "Quotazione_2025_26":52, "Prezzo_Consigliato":None},
+    {"Nome":"Zaniolo","Ruolo":"C","Squadra_SerieA":"Udinese","Quotazione":48,"FantaMedia":7.3,"Consiglio":"consigliato","Note":"5 gol, 6 assist, attaccante aggiunto", "Quotazione_2025_26":52, "Prezzo_Consigliato":None},
+    {"Nome":"Modric","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":43,"FantaMedia":7.1,"Consiglio":"consigliato","Note":"Rendimento garantito, media >6.5, esperienza", "Quotazione_2025_26":42, "Prezzo_Consigliato":None},
+    {"Nome":"Koné","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":40,"FantaMedia":6.9,"Consiglio":"consigliato","Note":"Media 6.26, mai sotto sufficienza, solido", "Quotazione_2025_26":43, "Prezzo_Consigliato":None},
+    {"Nome":"De Bruyne","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":46,"FantaMedia":7.2,"Consiglio":"consigliato","Note":"Se sta bene fa la differenza, calcia rigori", "Quotazione_2025_26":48, "Prezzo_Consigliato":None},
+    {"Nome":"Barella","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":44,"FantaMedia":7.0,"Consiglio":"consigliato","Note":"Sempre Barella, secondo slot ideale, affidabile", "Quotazione_2025_26":41, "Prezzo_Consigliato":None},
+    {"Nome":"Bernardeschi","Ruolo":"C","Squadra_SerieA":"Bologna","Quotazione":38,"FantaMedia":6.8,"Consiglio":"consigliato","Note":"Da prendere con Rowe, coppia ideale", "Quotazione_2025_26":36, "Prezzo_Consigliato":None},
+    {"Nome":"Rowe","Ruolo":"C","Squadra_SerieA":"Bologna","Quotazione":36,"FantaMedia":6.7,"Consiglio":"consigliato","Note":"3 gol, 3 assist, può crescere", "Quotazione_2025_26":41, "Prezzo_Consigliato":None},
+    {"Nome":"Thorstvedt","Ruolo":"C","Squadra_SerieA":"Sassuolo","Quotazione":30,"FantaMedia":6.5,"Consiglio":"consigliato","Note":"5-6 gol potenziali, buon rapporto", "Quotazione_2025_26":26, "Prezzo_Consigliato":None},
+    {"Nome":"Perrone","Ruolo":"C","Squadra_SerieA":"Como","Quotazione":35,"FantaMedia":6.7,"Consiglio":"consigliato","Note":"3 gol, 4 assist, voti alti, sottovalutato", "Quotazione_2025_26":36, "Prezzo_Consigliato":None},
+    {"Nome":"Alajbegovic","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":33,"FantaMedia":6.6,"Consiglio":"scommessa","Note":"Talentino trequarti, attenzione hype, può fare bene", "Quotazione_2025_26":16, "Prezzo_Consigliato":None},
+    {"Nome":"Douglas Luiz","Ruolo":"C","Squadra_SerieA":"Juventus","Quotazione":22,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"Intenzionato a restare, può tornare ai livelli di 2 anni fa", "Quotazione_2025_26":18, "Prezzo_Consigliato":None},
+    {"Nome":"Gaetano","Ruolo":"C","Squadra_SerieA":"Atalanta","Quotazione":19,"FantaMedia":6.2,"Consiglio":"scommessa","Note":"Sarri lo vuole, grande intuizione", "Quotazione_2025_26":12, "Prezzo_Consigliato":None},
+    {"Nome":"Stankovic A.","Ruolo":"C","Squadra_SerieA":"Inter","Quotazione":18,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"Fiducia Chivu, sostituto Calhanoglu", "Quotazione_2025_26":10, "Prezzo_Consigliato":None},
+    {"Nome":"Calò","Ruolo":"C","Squadra_SerieA":"Frosinone","Quotazione":22,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"10 gol, 14 assist in Serie B, grande salto", "Quotazione_2025_26":14, "Prezzo_Consigliato":None},
+    {"Nome":"Milla","Ruolo":"C","Squadra_SerieA":"Como","Quotazione":20,"FantaMedia":6.4,"Consiglio":"scommessa","Note":"Solo Yamal più assist in Liga, possibile crack", "Quotazione_2025_26":10, "Prezzo_Consigliato":None},
+    {"Nome":"Liberali","Ruolo":"C","Squadra_SerieA":"Como","Quotazione":18,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"Giovane dal grande potenziale, spazio con Champions", "Quotazione_2025_26":8, "Prezzo_Consigliato":None},
+    {"Nome":"Lautaro","Ruolo":"A","Squadra_SerieA":"Inter","Quotazione":88,"FantaMedia":8.5,"Consiglio":"top","Note":"Capocannoniere 17 gol, 6 assist, primo slot assoluto", "Quotazione_2025_26":90, "Prezzo_Consigliato":None},
+    {"Nome":"Malen","Ruolo":"A","Squadra_SerieA":"Roma","Quotazione":84,"FantaMedia":8.2,"Consiglio":"top","Note":"Vice-cannoniere 14 gol, sposta gli equilibri", "Quotazione_2025_26":72, "Prezzo_Consigliato":None},
+    {"Nome":"Thuram","Ruolo":"A","Squadra_SerieA":"Inter","Quotazione":74,"FantaMedia":7.9,"Consiglio":"top","Note":"13 gol, 6 assist, primo slot nonostante annata deludente", "Quotazione_2025_26":67, "Prezzo_Consigliato":None},
+    {"Nome":"Hojlund","Ruolo":"A","Squadra_SerieA":"Napoli","Quotazione":78,"FantaMedia":8.0,"Consiglio":"top","Note":"Tornato in Serie A, obiettivo 15 gol, Allegri punta forte", "Quotazione_2025_26":72, "Prezzo_Consigliato":None},
+    {"Nome":"Goncalo Ramos","Ruolo":"A","Squadra_SerieA":"Milan","Quotazione":78,"FantaMedia":8.0,"Consiglio":"top","Note":"Colpo da 70M, titolare Amorim, può superare doppia cifra", "Quotazione_2025_26":68, "Prezzo_Consigliato":None},
+    {"Nome":"Kolo Muani","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":76,"FantaMedia":7.9,"Consiglio":"top","Note":"Tornato alla Juve, Spalletti lo vuole, garanzia", "Quotazione_2025_26":69, "Prezzo_Consigliato":None},
+    {"Nome":"Leao","Ruolo":"A","Squadra_SerieA":"Milan","Quotazione":72,"FantaMedia":7.8,"Consiglio":"top","Note":"Prima fascia, può migliorare, talento puro", "Quotazione_2025_26":65, "Prezzo_Consigliato":None},
+    {"Nome":"Kean","Ruolo":"A","Squadra_SerieA":"Fiorentina","Quotazione":65,"FantaMedia":7.5,"Consiglio":"consigliato","Note":"Doppia cifra garantita, solido", "Quotazione_2025_26":48, "Prezzo_Consigliato":None},
+    {"Nome":"Yildiz","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":70,"FantaMedia":7.7,"Consiglio":"consigliato","Note":"10 gol, 6 assist, centro progetto, può esplodere", "Quotazione_2025_26":58, "Prezzo_Consigliato":None},
+    {"Nome":"Douvikas","Ruolo":"A","Squadra_SerieA":"Como","Quotazione":65,"FantaMedia":7.8,"Consiglio":"consigliato","Note":"14 gol, sorpresa 2024-25, doppia cifra sicura", "Quotazione_2025_26":64, "Prezzo_Consigliato":None},
+    {"Nome":"Dybala","Ruolo":"A","Squadra_SerieA":"Roma","Quotazione":58,"FantaMedia":7.4,"Consiglio":"consigliato","Note":"Sempre utile, momento della differenza, clutch", "Quotazione_2025_26":50, "Prezzo_Consigliato":None},
+    {"Nome":"Davis","Ruolo":"A","Squadra_SerieA":"Udinese","Quotazione":61,"FantaMedia":7.5,"Consiglio":"consigliato","Note":"10 gol, rigorista, garanzia bonus", "Quotazione_2025_26":53, "Prezzo_Consigliato":None},
+    {"Nome":"Scamacca","Ruolo":"A","Squadra_SerieA":"Atalanta","Quotazione":55,"FantaMedia":7.3,"Consiglio":"consigliato","Note":"Attenzione infortuni, ma potenziale top", "Quotazione_2025_26":44, "Prezzo_Consigliato":None},
+    {"Nome":"Simeone","Ruolo":"A","Squadra_SerieA":"Napoli","Quotazione":50,"FantaMedia":7.2,"Consiglio":"consigliato","Note":"11 gol, conferma, affidabile", "Quotazione_2025_26":41, "Prezzo_Consigliato":None},
+    {"Nome":"Dovbyk","Ruolo":"A","Squadra_SerieA":"Bologna","Quotazione":48,"FantaMedia":7.1,"Consiglio":"consigliato","Note":"Doppia cifra a Bologna, solido", "Quotazione_2025_26":54, "Prezzo_Consigliato":None},
+    {"Nome":"Colombo","Ruolo":"A","Squadra_SerieA":"Roma","Quotazione":35,"FantaMedia":6.8,"Consiglio":"consigliato","Note":"7 gol, obiettivo doppia cifra, può crescere", "Quotazione_2025_26":35, "Prezzo_Consigliato":None},
+    {"Nome":"Yeboah","Ruolo":"A","Squadra_SerieA":"Venezia","Quotazione":24,"FantaMedia":6.5,"Consiglio":"scommessa","Note":"Doppia cifra in Serie B, convocato al Mondiale", "Quotazione_2025_26":12, "Prezzo_Consigliato":None},
+    {"Nome":"Bowie","Ruolo":"A","Squadra_SerieA":"Sassuolo","Quotazione":25,"FantaMedia":6.4,"Consiglio":"scommessa","Note":"Ex Verona, goal in Serie A li sa fare", "Quotazione_2025_26":14, "Prezzo_Consigliato":None},
+    {"Nome":"Alajbegovic K.","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":33,"FantaMedia":6.7,"Consiglio":"scommessa","Note":"Colpo di mercato, trequarti, attenzione hype", "Quotazione_2025_26":17, "Prezzo_Consigliato":None},
+    {"Nome":"Rrahmani","Ruolo":"A","Squadra_SerieA":"Venezia","Quotazione":22,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"15 gol in Rep. Ceca, nuovo attaccante titolare", "Quotazione_2025_26":8, "Prezzo_Consigliato":None},
+    {"Nome":"Ekhator","Ruolo":"A","Squadra_SerieA":"Juventus","Quotazione":20,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"Low cost, potenziale, parte dietro nelle gerarchie", "Quotazione_2025_26":7, "Prezzo_Consigliato":None},
+    {"Nome":"Mendy","Ruolo":"A","Squadra_SerieA":"Cagliari","Quotazione":15,"FantaMedia":6.1,"Consiglio":"scommessa","Note":"2 gol in 8 partite, 2007, può esplodere", "Quotazione_2025_26":9, "Prezzo_Consigliato":None},
+    {"Nome":"Camarda","Ruolo":"A","Squadra_SerieA":"Milan","Quotazione":12,"FantaMedia":6.0,"Consiglio":"scommessa","Note":"Vice Ramos, a 1 credito ci sta", "Quotazione_2025_26":4, "Prezzo_Consigliato":None},
+    {"Nome":"Ratkov","Ruolo":"A","Squadra_SerieA":"Lazio","Quotazione":20,"FantaMedia":6.3,"Consiglio":"scommessa","Note":"Gattuso lo rilancia, puntatina senza esagerare", "Quotazione_2025_26":8, "Prezzo_Consigliato":None},
 ]
 
 # ============================================================
@@ -610,7 +610,6 @@ class StateManager:
         st.session_state.giocatori_db = snap["giocatori_db"]
         st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
         st.session_state.stats_storiche = snap["stats_storiche"]
-        st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db, snap.get("stats_storiche"))
         st.session_state.stats_per_stagione = snap["stats_per_stagione"]
         st.session_state.crediti_iniziali = snap["crediti_iniziali"]
         st.session_state.quotazioni_2025_26 = snap["quotazioni_2025_26"]
@@ -640,12 +639,6 @@ class StateManager:
         try:
             with open(tmp.name, "wb") as f:
                 pickle.dump(data, f)
-            # Backup di rollio: conserva sempre la versione precedente prima di sovrascrivere
-            try:
-                if os.path.exists(pkl_path):
-                    shutil.copy2(pkl_path, pkl_path + ".bak")
-            except Exception:
-                pass
             shutil.move(tmp.name, pkl_path)
         except Exception:
             if os.path.exists(tmp.name):
@@ -655,16 +648,14 @@ class StateManager:
     @staticmethod
     def load():
         pkl_path, json_path = get_user_save_paths()
-        # Prova il file principale, poi il backup di rollio (.bak) se il primo è danneggiato
-        for _p in (pkl_path, pkl_path + ".bak"):
-            if os.path.exists(_p):
-                try:
-                    with open(_p, "rb") as f:
-                        data = pickle.load(f)
-                    StateManager._hydrate(data)
-                    return True
-                except Exception:
-                    pass
+        if os.path.exists(pkl_path):
+            try:
+                with open(pkl_path, "rb") as f:
+                    data = pickle.load(f)
+                StateManager._hydrate(data)
+                return True
+            except Exception:
+                pass
         if os.path.exists(json_path):
             try:
                 with open(json_path, "r", encoding="utf-8") as f:
@@ -694,7 +685,6 @@ class StateManager:
             st.session_state.giocatori_db["Prezzo_Consigliato"] = None
         st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
         st.session_state.stats_storiche = data.get("stats_storiche", pd.DataFrame())
-        st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db, st.session_state.stats_storiche)
         st.session_state.stats_per_stagione = data.get("stats_per_stagione", {})
         st.session_state.crediti_iniziali = data.get("crediti_iniziali", CREDITI_INIZIALI)
         st.session_state.quotazioni_2025_26 = data.get("quotazioni_2025_26", pd.DataFrame())
@@ -891,36 +881,6 @@ def calcola_prezzo_consigliato(g_info, stats_df=None):
     spiegazione += f"\n**💡 Prezzo consigliato: {prezzo}cr**"
     return prezzo, spiegazione
 
-def assicura_prezzi_ai(db, stats_df=None, force=False):
-    """Calcola il Prezzo_Consigliato AI per TUTTI i giocatori del DB che ne sono privi
-    (o per tutti se force=True). Garantisce che ogni sezione mostri il prezzo AI
-    per l'intero listone, indipendentemente dal numero di giocatori (default,
-    import, snapshot, ripristino...). Restituisce il DataFrame aggiornato."""
-    if db is None or getattr(db, "empty", True):
-        return db
-    if "Prezzo_Consigliato" not in db.columns:
-        db["Prezzo_Consigliato"] = None
-    # Il calcolo della scarsita' legge st.session_state.giocatori_db: allineiamolo
-    st.session_state.giocatori_db = db
-    if stats_df is None:
-        stats_df = st.session_state.get("stats_storiche")
-        if stats_df is not None and getattr(stats_df, "empty", True):
-            stats_df = None
-    prezzi = []
-    for _, row in db.iterrows():
-        val = row.get("Prezzo_Consigliato")
-        if force or pd.isna(val):
-            try:
-                pc, _ = calcola_prezzo_consigliato(row.to_dict(), stats_df)
-            except Exception:
-                pc = None if pd.isna(val) else val
-            prezzi.append(pc)
-        else:
-            prezzi.append(val)
-    db["Prezzo_Consigliato"] = prezzi
-    st.session_state.giocatori_db = db
-    return db
-
 def riepilogo_rosa(squadra_nome):
     rosa = st.session_state.squadre[squadra_nome]["rosa"]
     crediti = st.session_state.squadre[squadra_nome]["crediti"]
@@ -991,31 +951,6 @@ def _get_fm_2627(nome):
     if not match.empty and "FantaMedia" in match.columns and pd.notna(match.iloc[0]["FantaMedia"]):
         return float(match.iloc[0]["FantaMedia"])
     return None
-
-def _get_gol_assist_2627(nome):
-    """Ritorna (gol, assist) della stagione 2026-27 come interi (0 se non disponibili)."""
-    if "stats_per_stagione" not in st.session_state:
-        return 0, 0
-    s2627 = st.session_state.stats_per_stagione.get("2026-27")
-    if s2627 is None or s2627.empty or "Nome" not in s2627.columns:
-        return 0, 0
-    match = s2627[s2627["Nome"].str.lower() == str(nome).lower()]
-    if match.empty:
-        nm = fuzzy_match(nome, s2627["Nome"].tolist())
-        if nm:
-            match = s2627[s2627["Nome"] == nm]
-    if match.empty:
-        return 0, 0
-    r = match.iloc[0]
-    def _num(aliases):
-        v = _stat_value(r, aliases, default=0)
-        try:
-            return int(float(v))
-        except (TypeError, ValueError):
-            return 0
-    gol = _num(["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti", "GF", "I gF", "Reti fatte"])
-    assist = _num(["Assist", "Assists", "Assist fatti", "Ass", "Passaggi vincenti"])
-    return gol, assist
 
 def simula_formazione(squadra_nome, modulo):
     rosa = st.session_state.squadre[squadra_nome]["rosa"]
@@ -1783,7 +1718,6 @@ def _build_stats_html(nome, stats_per_stagione):
 
     r = match.iloc[0]
     gol_fatti = _stat_value(r, ["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti", "GF", "I gF", "Reti fatte"])
-    assist = _stat_value(r, ["Assist", "Assists", "Assist fatti", "Ass", "Passaggi vincenti"])
     gol_subiti = _stat_value(r, ["Gol subiti", "Goal subiti", "GS", "I GS", "Reti subite"])
     ammonizioni = _stat_value(r, ["Ammonizioni", "Cartellini gialli", "Gialli", "Amm"])
     espulsioni = _stat_value(r, ["Espulsioni", "Cartellini rossi", "Rossi", "Esp"])
@@ -1792,7 +1726,6 @@ def _build_stats_html(nome, stats_per_stagione):
 
     stats = [
         ("⚽", "Gol fatti", gol_fatti, "#00d26a"),
-        ("🎯", "Assist", assist, "#38bdf8"),
         ("🥅", "Gol subiti", gol_subiti, "#ef4444"),
         ("🟨", "Ammonizioni", ammonizioni, "#eab308"),
         ("🟥", "Espulsioni", espulsioni, "#ef4444"),
@@ -1949,7 +1882,6 @@ if "initialized" not in st.session_state:
         for sq in get_nomi_squadre():
             st.session_state.squadre[sq] = {"crediti": CREDITI_INIZIALI, "rosa": []}
 
-    st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db)
     st.session_state.initialized = True
 
 # ============================================================
@@ -1972,7 +1904,6 @@ def render_wizard():
         with c1:
             if st.button("✅ Usa Listone Default", use_container_width=True):
                 st.session_state.giocatori_db = pd.DataFrame(LISTONE_DEFAULT)
-                st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db)
                 st.session_state.wizard_step = 2
                 save_state()
                 st.rerun()
@@ -2149,7 +2080,6 @@ with st.sidebar:
                 st.session_state.giocatori_db = migra_db_consigli(st.session_state.giocatori_db)
                 stats = data.get("stats_storiche", [])
                 st.session_state.stats_storiche = pd.DataFrame(stats) if stats else pd.DataFrame()
-                st.session_state.giocatori_db = assicura_prezzi_ai(st.session_state.giocatori_db, st.session_state.stats_storiche)
                 st.session_state.stats_per_stagione = {}
                 for stag, records in data.get("stats_per_stagione", {}).items():
                     st.session_state.stats_per_stagione[stag] = pd.DataFrame(records) if records else pd.DataFrame()
@@ -2242,6 +2172,7 @@ menu = st.radio(
         "🎯 Simulatore Rosa",
         "🧩 Completa Rosa",
         "💎 Affari",
+        "⚖️ Migliora Rosa",
         "📈 Statistiche Storiche",
         "⚙️ Importa & Esporta"
     ],
@@ -3054,191 +2985,78 @@ if menu == "🔍 Scouting & Database":
 
         with st.expander("⭐ Watchlist", expanded=True):
             st.subheader("⭐ Watchlist")
-
-            # --- Aggiunta rapida (anche multipla) ---
-            gia_in_wl = set(st.session_state.watchlist)
-            opzioni_add = [n for n in df["Nome"].values if n not in gia_in_wl]
-            c_add1, c_add2 = st.columns([3, 1])
-            with c_add1:
-                sel_add = st.multiselect("Aggiungi giocatori", opzioni_add, key="wl_add_multi",
-                                         placeholder="Cerca e seleziona uno o più giocatori...")
-            with c_add2:
-                st.write("")
-                st.write("")
-                if st.button("➕ Aggiungi", use_container_width=True, type="primary"):
-                    added = 0
-                    for n in sel_add:
-                        if n not in st.session_state.watchlist:
-                            st.session_state.watchlist.append(n)
-                            added += 1
-                    if added:
+            g_sel = st.selectbox("Aggiungi giocatore", df["Nome"].values, key="wl")
+            c1_wl, c2_wl = st.columns([1, 1])
+            with c1_wl:
+                if st.button("Aggiungi", use_container_width=True):
+                    if g_sel not in st.session_state.watchlist:
+                        st.session_state.watchlist.append(g_sel)
                         save_state()
-                        st.success(f"{added} giocatore/i aggiunto/i!")
+                        st.success(f"{g_sel} aggiunto!")
                         st.rerun()
-                    else:
-                        st.info("Nessun nuovo giocatore selezionato.")
+            with c2_wl:
+                if st.button("🗑️ Svuota Watchlist", use_container_width=True):
+                    st.session_state.watchlist = []
+                    save_state()
+                    st.rerun()
 
-            if not st.session_state.watchlist:
-                st.info("⭐ La watchlist è vuota. Aggiungi i giocatori che vuoi tenere d'occhio all'asta.")
-            else:
+            if st.session_state.watchlist:
                 df_wl = df[df["Nome"].isin(st.session_state.watchlist)].copy()
                 stats_df = st.session_state.stats_storiche if not st.session_state.stats_storiche.empty else None
-                stats_ps_wl = st.session_state.get("stats_per_stagione", {})
-                stats_2627_wl = stats_ps_wl.get("2026-27") if "2026-27" in stats_ps_wl else None
-                idx_wl = get_player_index()
-
-                # Calcoli: Prezzo AI, ValueScore, titolarità, affare
                 df_wl["Prezzo_AI"] = df_wl.apply(lambda row: calcola_prezzo_consigliato(row.to_dict(), stats_df)[0], axis=1)
-                df_wl["ValueScore"] = df_wl.apply(lambda row: calcola_value_score(row.to_dict(), stats_2627_wl), axis=1)
-                df_wl["Indice_Titolarita"] = df_wl.apply(lambda row: calcola_indice_titolarita(row.to_dict(), stats_2627_wl), axis=1)
-                df_wl["Delta_AI"] = df_wl["Prezzo_AI"].fillna(0).astype(int) - df_wl["Quotazione"].fillna(0).astype(int)
+                if "Quotazione_2025_26" in df_wl.columns and "Variazione_%" not in df_wl.columns:
+                    df_wl["Variazione_%"] = round((df_wl["Quotazione"] - df_wl["Quotazione_2025_26"]) / df_wl["Quotazione_2025_26"].replace(0, 1) * 100, 1)
 
-                # Migliori affari: ValueScore nel quartile alto -> badge dedicato
-                _vs_wl = df_wl["ValueScore"].fillna(0)
-                if len(_vs_wl) >= 4:
-                    _vs_soglia_top = float(_vs_wl.quantile(0.75))
-                else:
-                    _vs_soglia_top = float(_vs_wl.max()) if len(_vs_wl) else 0.0
-                df_wl["Top_Affare"] = (df_wl["ValueScore"].fillna(0) >= _vs_soglia_top) & (df_wl["ValueScore"].fillna(0) > 0)
-
-                def _badge_affare_html():
-                    return ("<div style='display:inline-block;background:linear-gradient(90deg,#f59e0b,#ef4444);"
-                            "color:#fff;font-weight:800;font-size:0.72em;letter-spacing:.5px;"
-                            "border-radius:10px;padding:2px 10px;"
-                            "box-shadow:0 0 8px rgba(245,158,11,.6);'>🔥 TOP AFFARE</div>")
-
-                # --- Metriche riassuntive con colori ruolo ---
-                colori_ruolo_wl = {"P": "#3b82f6", "D": "#22c55e", "C": "#eab308", "A": "#ef4444"}
-                ruoli_nomi_wl = {"P": "🧤 Portieri", "D": "🛡️ Difensori", "C": "⚙️ Centrocampisti", "A": "⚔️ Attaccanti"}
+                # Metriche riassuntive
+                tot_wl = len(df_wl)
                 conti_wl = {"P": 0, "D": 0, "C": 0, "A": 0}
+                budget_wl = 0
                 for _, r in df_wl.iterrows():
                     ru = r.get("Ruolo", "C")
                     if ru in conti_wl:
                         conti_wl[ru] += 1
-                budget_quot = int(df_wl["Quotazione"].fillna(0).sum())
-                budget_ai = int(df_wl["Prezzo_AI"].fillna(0).sum())
-                n_affari = int((df_wl["Delta_AI"] > 0).sum())
+                    budget_wl += int(r.get("Quotazione", 0))
+                m1, m2, m3, m4, m5 = st.columns(5)
+                with m1:
+                    st.metric("Totale Watchlist", tot_wl)
+                with m2:
+                    st.metric("🧤 Portieri", conti_wl["P"])
+                with m3:
+                    st.metric("🛡️ Difensori", conti_wl["D"])
+                with m4:
+                    st.metric("⚙️ Centrocampisti", conti_wl["C"])
+                with m5:
+                    st.metric("⚔️ Attaccanti", conti_wl["A"])
+                st.caption(f"💰 Budget totale quotazioni: **{budget_wl}cr** | Prezzo AI medio: **{int(df_wl['Prezzo_AI'].mean())}cr**")
 
-                chips = "".join(
-                    f"<span style='display:inline-block;background:{colori_ruolo_wl[ru]}22;"
-                    f"border:1px solid {colori_ruolo_wl[ru]};color:{colori_ruolo_wl[ru]};"
-                    f"border-radius:14px;padding:3px 12px;margin:3px;font-weight:600;'>"
-                    f"{ruoli_nomi_wl[ru]}: {conti_wl[ru]}</span>"
-                    for ru in ["P", "D", "C", "A"]
-                )
-                st.markdown(
-                    f"<div style='display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;'>"
-                    f"<span style='font-size:1.15em;font-weight:700;'>⭐ {len(df_wl)} in watchlist</span>"
-                    f"<span style='margin-left:6px;'>{chips}</span></div>",
-                    unsafe_allow_html=True,
-                )
-                mcol1, mcol2, mcol3 = st.columns(3)
-                mcol1.metric("💰 Budget quotazioni", f"{budget_quot}cr")
-                mcol2.metric("🧠 Budget Prezzo AI", f"{budget_ai}cr", delta=f"{budget_ai - budget_quot:+d}cr")
-                mcol3.metric("🔥 Affari (AI > quot.)", n_affari)
-                _n_top = int(df_wl["Top_Affare"].sum())
-                if _n_top:
-                    st.caption(f"🔥 **{_n_top}** top affari evidenziati (miglior rapporto qualità/prezzo).")
+                stats_ps_wl = st.session_state.get("stats_per_stagione", {})
+                stats_2627_wl = stats_ps_wl.get("2026-27") if "2026-27" in stats_ps_wl else None
+                idx_wl = get_player_index()
 
-                st.markdown("---")
-
-                # --- Controlli visualizzazione ---
-                ctrl1, ctrl2, ctrl3 = st.columns([2, 2, 2])
-                with ctrl1:
-                    ordina_wl = st.selectbox("Ordina per",
-                        ["💎 Value per prezzo", "⭐ FantaMedia", "💰 Quotazione", "🧠 Prezzo AI", "🔥 Miglior affare (Δ AI)", "📈 Titolarità"],
-                        key="wl_sort")
-                with ctrl2:
-                    filtro_ruolo_wl = st.selectbox("Ruolo", ["Tutti", "🧤 Portieri", "🛡️ Difensori", "⚙️ Centrocampisti", "⚔️ Attaccanti"], key="wl_filtro_ruolo")
-                with ctrl3:
-                    vista_wl = st.radio("Vista", ["🃏 Card", "📋 Tabella"], horizontal=True, key="wl_vista")
-                c_svuota1, _sp_wl = st.columns([1, 3])
-                with c_svuota1:
-                    if st.button("🗑️ Svuota watchlist", use_container_width=True, key="wl_svuota"):
-                        st.session_state.watchlist = []
-                        save_state()
-                        st.rerun()
-
-                # ordinamento
-                sort_map = {
-                    "💎 Value per prezzo": ("ValueScore", False),
-                    "⭐ FantaMedia": ("FantaMedia", False),
-                    "💰 Quotazione": ("Quotazione", False),
-                    "🧠 Prezzo AI": ("Prezzo_AI", False),
-                    "🔥 Miglior affare (Δ AI)": ("Delta_AI", False),
-                    "📈 Titolarità": ("Indice_Titolarita", False),
-                }
-                sort_col, sort_asc = sort_map.get(ordina_wl, ("ValueScore", False))
-                df_wl = df_wl.sort_values(sort_col, ascending=sort_asc, na_position="last")
-
-                # filtro ruolo
-                mappa_filtro = {"🧤 Portieri": "P", "🛡️ Difensori": "D", "⚙️ Centrocampisti": "C", "⚔️ Attaccanti": "A"}
-                if filtro_ruolo_wl in mappa_filtro:
-                    df_wl = df_wl[df_wl["Ruolo"] == mappa_filtro[filtro_ruolo_wl]]
-
-                if df_wl.empty:
-                    st.caption("Nessun giocatore per questo filtro.")
-                elif vista_wl == "📋 Tabella":
-                    df_tab = df_wl.copy()
-                    df_tab["Proprietario"] = df_tab["Nome"].apply(lambda n: idx_wl.get(str(n).lower(), "Svincolato 🟢"))
-                    df_tab["Affare"] = df_wl["Top_Affare"].map(lambda x: "🔥 TOP" if x else "")
-                    cols_tab = [c for c in ["Affare", "Nome", "Ruolo", "Squadra_SerieA", "Quotazione", "Prezzo_AI", "Delta_AI", "FantaMedia", "ValueScore", "Proprietario"] if c in df_tab.columns]
-                    df_tab = df_tab[cols_tab]
-                    max_vs_wl = float(df_tab["ValueScore"].max()) if "ValueScore" in df_tab.columns and len(df_tab) else 1.0
-                    st.dataframe(
-                        df_tab, use_container_width=True, hide_index=True,
-                        column_config={
-                            "Affare": st.column_config.TextColumn("🔥 Affare", help="Migliori affari per rapporto qualità/prezzo"),
-                            "Squadra_SerieA": st.column_config.TextColumn("Squadra"),
-                            "Prezzo_AI": st.column_config.NumberColumn("Prezzo AI", format="%d cr"),
-                            "Quotazione": st.column_config.NumberColumn("Quot.", format="%d cr"),
-                            "Delta_AI": st.column_config.NumberColumn("Δ AI", format="%+d cr", help="Prezzo AI - Quotazione (positivo = affare)"),
-                            "ValueScore": st.column_config.ProgressColumn("Value", min_value=0, max_value=max(1.0, max_vs_wl), format="%.1f"),
-                        },
-                    )
-                    rc1, rc2 = st.columns([3, 1])
-                    with rc1:
-                        da_rimuovere = st.multiselect("Rimuovi dalla watchlist", list(df_wl["Nome"]), key="wl_rm_tab")
-                    with rc2:
-                        st.write("")
-                        st.write("")
-                        if st.button("❌ Rimuovi", use_container_width=True, key="wl_rm_tab_btn") and da_rimuovere:
-                            st.session_state.watchlist = [g for g in st.session_state.watchlist if g not in da_rimuovere]
-                            save_state()
-                            st.rerun()
-                else:
-                    def _render_card_wl(row_wl):
-                        rdict = row_wl.to_dict()
-                        rdict["Proprietario"] = idx_wl.get(str(rdict.get("Nome", "")).lower(), "Svincolato 🟢")
-                        if pd.isna(rdict.get("Indice_Affare")):
-                            rdict["Indice_Affare"] = round(float(rdict.get("FantaMedia", 6.0)) / max(float(rdict.get("Quotazione", 1)), 1), 2)
-                        if pd.isna(rdict.get("Indice_Titolarita")):
-                            rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_wl)
-                        if bool(row_wl.get("Top_Affare")):
-                            st.markdown(f"<div style='text-align:center;'>{_badge_affare_html()}</div>", unsafe_allow_html=True)
-                        st.markdown(render_flip_card(rdict, stats_ps_wl, stats_2627_wl), unsafe_allow_html=True)
-                        nome_wl = str(rdict.get("Nome", ""))
-                        if st.button("❌ Rimuovi", key=f"wl_rm_{nome_wl}", help=f"Rimuovi {nome_wl}", use_container_width=True):
-                            st.session_state.watchlist = [g for g in st.session_state.watchlist if g != nome_wl]
-                            save_state()
-                            st.rerun()
-
-                    if filtro_ruolo_wl in mappa_filtro:
-                        cols_grid = st.columns(4)
-                        for i, (_, row_wl) in enumerate(df_wl.iterrows()):
-                            with cols_grid[i % 4]:
-                                _render_card_wl(row_wl)
-                    else:
-                        cols_wl = st.columns(4)
-                        for idx_r, ruolo in enumerate(["P", "D", "C", "A"]):
-                            with cols_wl[idx_r]:
-                                st.markdown(f"<div style='color:{colori_ruolo_wl[ruolo]};font-weight:700;text-align:center;margin-bottom:4px;'>{ruoli_nomi_wl[ruolo]}</div>", unsafe_allow_html=True)
-                                df_r_wl = df_wl[df_wl["Ruolo"] == ruolo]
-                                if not df_r_wl.empty:
-                                    for _, row_wl in df_r_wl.iterrows():
-                                        _render_card_wl(row_wl)
-                                else:
-                                    st.caption("Nessuno")
+                # Card per ruolo
+                ruoli_wl = ["P", "D", "C", "A"]
+                ruoli_nomi_wl = {"P": "🧤 Portieri", "D": "🛡️ Difensori", "C": "⚙️ Centrocampisti", "A": "⚔️ Attaccanti"}
+                cols_wl = st.columns(4)
+                for idx_r, ruolo in enumerate(ruoli_wl):
+                    with cols_wl[idx_r]:
+                        st.markdown(f"**{ruoli_nomi_wl[ruolo]}**")
+                        df_r_wl = df_wl[df_wl["Ruolo"] == ruolo].sort_values("Indice_Titolarita", ascending=False)
+                        if not df_r_wl.empty:
+                            for _, row_wl in df_r_wl.iterrows():
+                                rdict = row_wl.to_dict()
+                                rdict["Proprietario"] = idx_wl.get(str(rdict.get("Nome", "")).lower(), "Svincolato 🟢")
+                                if pd.isna(rdict.get("Indice_Affare")):
+                                    rdict["Indice_Affare"] = round(float(rdict.get("FantaMedia", 6.0)) / max(float(rdict.get("Quotazione", 1)), 1), 2)
+                                if pd.isna(rdict.get("Indice_Titolarita")):
+                                    rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_wl)
+                                st.markdown(render_flip_card(rdict, stats_ps_wl, stats_2627_wl), unsafe_allow_html=True)
+                                nome_wl = str(rdict.get("Nome", ""))
+                                if st.button("❌ Rimuovi", key=f"wl_rm_{ruolo}_{nome_wl}", help=f"Rimuovi {nome_wl} dalla watchlist", use_container_width=True):
+                                    st.session_state.watchlist = [g for g in st.session_state.watchlist if g != nome_wl]
+                                    save_state()
+                                    st.rerun()
+                        else:
+                            st.caption("Nessuno")
 
 # ============================================================
 # 2. ASTA LIVE
@@ -3246,29 +3064,6 @@ if menu == "🔍 Scouting & Database":
 if menu == "🔨 Asta Live":
     st.header("🔨 Gestione Asta")
     st.caption("Gestisci l'asta in tempo reale: seleziona giocatore, raccogli offerte, assegna.")
-
-    # --- 🔔 POPUP AVVISO WATCHLIST ---
-    def _popup_watchlist_contenuto(nome, ruolo, squadra, quot, fm):
-        st.markdown(
-            "<div style='text-align:center;'>"
-            "<div style='font-size:2.6em;'>🔔⭐</div>"
-            f"<div style='font-size:1.5em;font-weight:bold;color:#ffd700;margin-top:4px;'>{nome}</div>"
-            f"<div style='color:#aaa;margin-top:2px;'>{ruolo} · {squadra}</div>"
-            f"<div style='margin-top:10px;font-size:1.05em;'>Quotazione <b>{quot}cr</b> · FantaMedia <b>{fm}</b></div>"
-            "<div style='margin-top:8px;color:#00d26a;font-weight:600;'>È nella tua watchlist: preparati a rilanciare!</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    if hasattr(st, "dialog"):
-        @st.dialog("🔔 Giocatore della watchlist lanciato!")
-        def _popup_watchlist(nome, ruolo, squadra, quot, fm):
-            _popup_watchlist_contenuto(nome, ruolo, squadra, quot, fm)
-            if st.button("👍 Ho capito", type="primary", use_container_width=True):
-                st.session_state["_wl_popup_open"] = None
-                st.rerun()
-    else:
-        _popup_watchlist = None
 
     # --- SIMULAZIONE ASTA AVVERSARIA ---
     with st.expander("🔮 Simula Asta Avversaria", expanded=False):
@@ -3444,20 +3239,6 @@ if menu == "🔨 Asta Live":
 
             if g_asta:
                 info = svinc[svinc["Nome"] == g_asta].iloc[0]
-
-                # --- 🔔 Avviso quando viene lanciato un giocatore della watchlist ---
-                if g_asta in st.session_state.watchlist:
-                    if st.session_state.get("_wl_last_alert") != g_asta:
-                        st.session_state["_wl_last_alert"] = g_asta
-                        st.session_state["_wl_popup_open"] = g_asta
-                        st.toast(f"🔔 {g_asta} (watchlist) è all'asta!", icon="⭐")
-                    if st.session_state.get("_wl_popup_open") == g_asta:
-                        if _popup_watchlist is not None:
-                            _popup_watchlist(g_asta, info["Ruolo"], info["Squadra_SerieA"], int(info["Quotazione"]), info["FantaMedia"])
-                        else:
-                            st.warning(f"🔔 **{g_asta}** è nella tua watchlist ed è appena stato lanciato all'asta! Preparati a rilanciare.")
-                            st.session_state["_wl_popup_open"] = None
-
                 with col2:
                     st.markdown(
                         f"<div style='background:#1a1a2e;padding:12px;border-radius:8px;text-align:center;'>"
@@ -3876,20 +3657,19 @@ if menu == "🛒 Mercato":
 # ============================================================
 if menu == "🤝 Scambi & Prestiti":
     st.header("🤝 Scambi Definitivi & Prestiti")
-    st.caption("💡 Puoi scambiare 1, 2 o 3 giocatori per squadra (con eventuale conguaglio in crediti). Seleziona più nomi in «Cede giocatori».")
 
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("Squadra A")
         sq1 = st.selectbox("Squadra 1", get_nomi_squadre(), key="sc1")
         rosa1 = [g for g in st.session_state.squadre[sq1]["rosa"] if g.get("Prestito_Da") is None or g.get("Prestito_Da") == sq1]
-        g1 = st.multiselect("Cede giocatori (fino a 3)", [g["Nome"] for g in rosa1], key="g1", max_selections=3)
+        g1 = st.multiselect("Cede giocatori", [g["Nome"] for g in rosa1], key="g1")
         d1 = st.number_input(f"Conguaglio da {sq1}", min_value=0, max_value=st.session_state.squadre[sq1]["crediti"], value=0, key="d1")
     with c2:
         st.subheader("Squadra B")
         sq2 = st.selectbox("Squadra 2", [s for s in get_nomi_squadre() if s != sq1], key="sc2")
         rosa2 = [g for g in st.session_state.squadre[sq2]["rosa"] if g.get("Prestito_Da") is None or g.get("Prestito_Da") == sq2]
-        g2 = st.multiselect("Cede giocatori (fino a 3)", [g["Nome"] for g in rosa2], key="g2", max_selections=3)
+        g2 = st.multiselect("Cede giocatori", [g["Nome"] for g in rosa2], key="g2")
         d2 = st.number_input(f"Conguaglio da {sq2}", min_value=0, max_value=st.session_state.squadre[sq2]["crediti"], value=0, key="d2")
 
     tipo = st.radio("Tipo operazione", ["Scambio Definitivo", "Prestito 6 mesi", "Prestito 1 anno"], horizontal=True)
@@ -4330,35 +4110,6 @@ if menu == "📋 Rose & Contratti":
                                         rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_rosa)
                                     with card_cols[idx_c % len(card_cols)]:
                                         st.markdown(render_flip_card(rdict, stats_ps_rosa, stats_2627_rosa), unsafe_allow_html=True)
-
-                    # --- 📊 TABELLA RIASSUNTIVA GOL & ASSIST ---
-                    st.markdown("---")
-                    st.subheader("⚽ Gol & Assist Rosa (2026/27)")
-                    ga_rows = []
-                    for _, rp in display.iterrows():
-                        nome_p = rp.get("Nome", "")
-                        gol_p, ast_p = _get_gol_assist_2627(nome_p)
-                        ga_rows.append({
-                            "Nome": nome_p,
-                            "Ruolo": rp.get("Ruolo", ""),
-                            "Gol": gol_p,
-                            "Assist": ast_p,
-                            "Gol+Assist": gol_p + ast_p,
-                        })
-                    ga_df = pd.DataFrame(ga_rows)
-                    if not ga_df.empty:
-                        ga_df = ga_df.sort_values(["Gol+Assist", "Gol"], ascending=[False, False])
-                        g_tot = int(ga_df["Gol"].sum())
-                        a_tot = int(ga_df["Assist"].sum())
-                        c_g1, c_g2, c_g3 = st.columns(3)
-                        c_g1.metric("⚽ Gol totali", g_tot)
-                        c_g2.metric("🎯 Assist totali", a_tot)
-                        c_g3.metric("Σ Gol+Assist", g_tot + a_tot)
-                        tot_row = {"Nome": "🏆 TOTALE", "Ruolo": "", "Gol": g_tot, "Assist": a_tot, "Gol+Assist": g_tot + a_tot}
-                        ga_show = pd.concat([ga_df, pd.DataFrame([tot_row])], ignore_index=True)
-                        st.dataframe(ga_show, use_container_width=True, hide_index=True)
-                        if st.session_state.get("stats_per_stagione", {}).get("2026-27") is None:
-                            st.caption("ℹ️ Carica le statistiche 2026/27 (sezione 📈 Statistiche Storiche) per popolare gol e assist.")
 
                     in_scadenza = display[display["Stato_Contratto"].str.contains("🟠|🔴")]
                     if not in_scadenza.empty:
@@ -5803,3 +5554,203 @@ elif menu == "💎 Affari":
             st.scatter_chart(scatter_df, x="Prezzo_Cons", y="FantaMedia", color="Ruolo", height=360)
         except Exception:
             pass
+
+
+# ============================================================
+# 12. MIGLIORA ROSA — CONFRONTO FANTAMEDIA vs SVINCOLATI
+# ============================================================
+elif menu == "⚖️ Migliora Rosa":
+    st.header("⚖️ Migliora Rosa")
+    st.caption("Confronta la FantaMedia dei tuoi giocatori con quella degli svincolati e scopri chi acquistare e chi vendere per alzare la media della rosa.")
+
+    _ruoli_nome = {"P": "🧤 Portieri", "D": "🛡️ Difensori", "C": "⚙️ Centrocampisti", "A": "⚔️ Attaccanti"}
+    _ruoli_ordine = ["P", "D", "C", "A"]
+
+    squadre_list = get_nomi_squadre()
+    if not squadre_list:
+        st.info("Nessuna squadra configurata.")
+    else:
+        colA, colB, colC = st.columns([2, 1, 1])
+        with colA:
+            sq_mia = st.selectbox("La mia squadra", squadre_list, key="migliora_squadra")
+        with colB:
+            solo_budget_mig = st.checkbox("Solo svincolati entro i crediti", value=False, key="migliora_budget")
+        with colC:
+            soglia_delta = st.slider("Guadagno FM minimo", 0.0, 1.0, 0.2, 0.1, key="migliora_soglia",
+                                     help="Suggerisco uno scambio solo se lo svincolato ha almeno questo vantaggio di FantaMedia sul tuo giocatore.")
+
+        db = st.session_state.giocatori_db
+        svinc_all = get_svincolati(db).copy()
+        svinc_all["FantaMedia"] = pd.to_numeric(svinc_all["FantaMedia"], errors="coerce")
+        svinc_all["Quotazione"] = pd.to_numeric(svinc_all["Quotazione"], errors="coerce")
+
+        crediti_mia = st.session_state.squadre[sq_mia]["crediti"]
+        rosa_mia = st.session_state.squadre[sq_mia]["rosa"]
+
+        def _fm_giocatore(g):
+            fm = g.get("FantaMedia")
+            if fm is None or (isinstance(fm, float) and pd.isna(fm)):
+                info = get_db_info(g.get("Nome", ""))
+                if info and info.get("FantaMedia") is not None:
+                    fm = info.get("FantaMedia")
+            try:
+                return round(float(fm), 2)
+            except (TypeError, ValueError):
+                return None
+
+        righe_rosa = []
+        for g in rosa_mia:
+            righe_rosa.append({
+                "Nome": g.get("Nome", "?"),
+                "Ruolo": g.get("Ruolo", "?"),
+                "Squadra_SerieA": g.get("Squadra_SerieA", ""),
+                "FantaMedia": _fm_giocatore(g),
+                "Quotazione": g.get("Quotazione"),
+            })
+        df_rosa = pd.DataFrame(righe_rosa)
+
+        if df_rosa.empty:
+            st.warning("La rosa di **" + sq_mia + "** è vuota: inserisci dei giocatori per usare questo confronto.")
+        else:
+            svinc_budget = svinc_all.copy()
+            if solo_budget_mig:
+                svinc_budget = svinc_budget[svinc_budget["Quotazione"].fillna(0) <= crediti_mia]
+
+            fm_rosa_mean = df_rosa["FantaMedia"].dropna().mean()
+            st.markdown("<div class='fm-section-title'>📊 Panoramica</div>", unsafe_allow_html=True)
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Giocatori in rosa", len(df_rosa))
+            m2.metric("FantaMedia media rosa", ("%.2f" % fm_rosa_mean) if pd.notna(fm_rosa_mean) else "—")
+            m3.metric("Svincolati disponibili", len(svinc_budget))
+            m4.metric("Crediti", str(crediti_mia) + "cr")
+
+            st.markdown("---")
+            st.markdown("<div class='fm-section-title'>⚖️ FantaMedia media: la tua rosa vs gli svincolati</div>", unsafe_allow_html=True)
+
+            cmp_rows = []
+            for r in _ruoli_ordine:
+                mia_r = df_rosa[df_rosa["Ruolo"] == r]["FantaMedia"].dropna()
+                sv_r = svinc_budget[svinc_budget["Ruolo"] == r]["FantaMedia"].dropna()
+                top3_sv = sv_r.sort_values(ascending=False).head(3)
+                cmp_rows.append({
+                    "Ruolo": _ruoli_nome[r],
+                    "FM media rosa": round(mia_r.mean(), 2) if not mia_r.empty else None,
+                    "FM media svincolati": round(sv_r.mean(), 2) if not sv_r.empty else None,
+                    "FM top3 svincolati": round(top3_sv.mean(), 2) if not top3_sv.empty else None,
+                    "N. miei": len(mia_r),
+                    "N. svincolati": len(sv_r),
+                })
+            df_cmp = pd.DataFrame(cmp_rows)
+            st.dataframe(df_cmp, use_container_width=True, hide_index=True)
+
+            try:
+                chart_df = df_cmp.dropna(subset=["FM media rosa"]).set_index("Ruolo")[["FM media rosa", "FM top3 svincolati"]]
+                if not chart_df.empty:
+                    st.bar_chart(chart_df, height=300)
+                    st.caption("Dove la barra 'top3 svincolati' supera 'media rosa', c'è margine di miglioramento sul mercato.")
+            except Exception:
+                pass
+
+            st.markdown("---")
+            st.markdown("<div class='fm-section-title'>🔁 Upgrade consigliati (vendi uno, prendi uno migliore)</div>", unsafe_allow_html=True)
+            st.caption("Abbino i tuoi giocatori più deboli con lo svincolato libero più forte dello stesso ruolo. Ogni svincolato è proposto una sola volta.")
+
+            upgrade_rows = []
+            comprare_nomi = set()
+            vendere_nomi = set()
+            for r in _ruoli_ordine:
+                miei = df_rosa[(df_rosa["Ruolo"] == r) & (df_rosa["FantaMedia"].notna())].sort_values("FantaMedia")
+                sv_r = svinc_budget[(svinc_budget["Ruolo"] == r) & (svinc_budget["FantaMedia"].notna())].sort_values("FantaMedia", ascending=False)
+                sv_list = sv_r.to_dict("records")
+                usati = 0
+                for _, mio in miei.iterrows():
+                    if usati >= len(sv_list):
+                        break
+                    cand = sv_list[usati]
+                    delta = cand["FantaMedia"] - mio["FantaMedia"]
+                    if delta >= soglia_delta:
+                        upgrade_rows.append({
+                            "Ruolo": r,
+                            "❌ Vendi": mio["Nome"],
+                            "FM attuale": round(mio["FantaMedia"], 2),
+                            "✅ Compra (svincolato)": cand["Nome"],
+                            "FM nuovo": round(cand["FantaMedia"], 2),
+                            "Guadagno FM": round(delta, 2),
+                            "Costo (quot.)": int(cand["Quotazione"]) if pd.notna(cand["Quotazione"]) else None,
+                            "Squadra SerieA": cand.get("Squadra_SerieA", ""),
+                        })
+                        comprare_nomi.add(cand["Nome"])
+                        vendere_nomi.add(mio["Nome"])
+                        usati += 1
+
+            if upgrade_rows:
+                df_up = pd.DataFrame(upgrade_rows).sort_values("Guadagno FM", ascending=False)
+                df_up_show = df_up.drop(columns=["Ruolo"])
+                st.dataframe(df_up_show, use_container_width=True, hide_index=True)
+
+                guadagno_tot = df_up["Guadagno FM"].sum()
+                costo_tot = pd.to_numeric(df_up["Costo (quot.)"], errors="coerce").sum()
+                nuova_media = fm_rosa_mean + (guadagno_tot / len(df_rosa)) if pd.notna(fm_rosa_mean) and len(df_rosa) else fm_rosa_mean
+                k1, k2, k3 = st.columns(3)
+                k1.metric("Scambi suggeriti", len(df_up))
+                k2.metric("FantaMedia rosa proiettata", ("%.2f" % nuova_media) if pd.notna(nuova_media) else "—",
+                          delta=("+%.2f" % (nuova_media - fm_rosa_mean)) if pd.notna(nuova_media) and pd.notna(fm_rosa_mean) else None)
+                k3.metric("Spesa stimata (quotazioni)", (str(int(costo_tot)) + "cr") if pd.notna(costo_tot) else "—")
+                if solo_budget_mig and pd.notna(costo_tot) and costo_tot > crediti_mia:
+                    st.warning("⚠️ La spesa totale supera i tuoi crediti: dovrai prima vendere i giocatori sostituiti o scegliere solo gli upgrade con guadagno FM più alto.")
+            else:
+                st.success("✅ Nessun upgrade evidente: la tua rosa è già competitiva rispetto agli svincolati disponibili (oppure alza la soglia di guadagno FM).")
+
+            st.markdown("---")
+            st.markdown("<div class='fm-section-title'>🟢 Chi acquistare per migliorare</div>", unsafe_allow_html=True)
+            st.caption("Svincolati con FantaMedia superiore alla media della tua rosa nel loro ruolo.")
+
+            medie_ruolo_mia = {r: df_rosa[df_rosa["Ruolo"] == r]["FantaMedia"].dropna().mean() for r in _ruoli_ordine}
+            buy_frames = []
+            for r in _ruoli_ordine:
+                soglia_r = medie_ruolo_mia.get(r)
+                sv_r = svinc_budget[(svinc_budget["Ruolo"] == r) & (svinc_budget["FantaMedia"].notna())].copy()
+                if pd.notna(soglia_r):
+                    sv_r = sv_r[sv_r["FantaMedia"] > soglia_r]
+                sv_r = sv_r.sort_values("FantaMedia", ascending=False).head(5)
+                if not sv_r.empty:
+                    sv_r["Priorità"] = sv_r["Nome"].isin(comprare_nomi).map({True: "⭐ upgrade diretto", False: ""})
+                    buy_frames.append(sv_r)
+            if buy_frames:
+                df_buy = pd.concat(buy_frames, ignore_index=True)
+                cols_buy = [c for c in ["Nome", "Ruolo", "Squadra_SerieA", "FantaMedia", "Quotazione", "Consiglio", "Priorità"] if c in df_buy.columns]
+                st.dataframe(df_buy[cols_buy], use_container_width=True, hide_index=True)
+            else:
+                st.info("Nessuno svincolato supera la media della tua rosa nei vari ruoli: sei messo bene!")
+
+            st.markdown("---")
+            st.markdown("<div class='fm-section-title'>🔴 Chi vendere / sostituire</div>", unsafe_allow_html=True)
+            st.caption("I tuoi giocatori con FantaMedia sotto la media del loro ruolo e per cui esiste uno svincolato migliore.")
+
+            sell_rows = []
+            for r in _ruoli_ordine:
+                soglia_r = medie_ruolo_mia.get(r)
+                sv_fm_r = svinc_budget[(svinc_budget["Ruolo"] == r) & (svinc_budget["FantaMedia"].notna())]["FantaMedia"]
+                best_sv = sv_fm_r.max() if not sv_fm_r.empty else None
+                miei_r = df_rosa[(df_rosa["Ruolo"] == r) & (df_rosa["FantaMedia"].notna())]
+                for _, mio in miei_r.iterrows():
+                    sotto_media = pd.notna(soglia_r) and mio["FantaMedia"] < soglia_r
+                    esiste_meglio = (best_sv is not None) and pd.notna(best_sv) and best_sv > mio["FantaMedia"]
+                    if sotto_media and esiste_meglio:
+                        sell_rows.append({
+                            "Nome": mio["Nome"],
+                            "Ruolo": mio["Ruolo"],
+                            "Squadra_SerieA": mio["Squadra_SerieA"],
+                            "FantaMedia": mio["FantaMedia"],
+                            "Media ruolo rosa": round(soglia_r, 2),
+                            "Miglior svincolato": round(best_sv, 2),
+                            "Nota": "⭐ già in un upgrade" if mio["Nome"] in vendere_nomi else "candidato",
+                        })
+            if sell_rows:
+                df_sell = pd.DataFrame(sell_rows).sort_values("FantaMedia")
+                st.dataframe(df_sell, use_container_width=True, hide_index=True)
+            else:
+                st.success("✅ Nessun giocatore da vendere: la rosa è equilibrata rispetto agli svincolati disponibili.")
+
+            st.markdown("---")
+            st.caption("💡 Le quotazioni indicano il valore di listino degli svincolati, non il prezzo d'asta finale. Usa gli 'Upgrade consigliati' come punto di partenza e verifica sempre i crediti disponibili.")
