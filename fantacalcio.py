@@ -2171,8 +2171,8 @@ menu = st.radio(
         "📋 Rose & Contratti",
         "🎯 Simulatore Rosa",
         "🧩 Completa Rosa",
-        "💎 Affari",
         "⚖️ Migliora Rosa",
+        "💎 Affari",
         "📈 Statistiche Storiche",
         "⚙️ Importa & Esporta"
     ],
@@ -5471,6 +5471,363 @@ elif menu == "🧩 Completa Rosa":
 
 
 # ============================================================
+# 11. MIGLIORA ROSA — scegli TU chi cambiare, l'IA ti consiglia il sostituto
+# ============================================================
+elif menu == "⚖️ Migliora Rosa":
+    st.header("⚖️ Migliora Rosa")
+    st.caption(
+        "Scegli tu i giocatori della tua rosa che vuoi cambiare: l'IA ti propone il "
+        "miglior sostituto svincolato per ognuno, oppure puoi decidere tu un altro sostituto. "
+        "Regole d'asta: costo minimo di acquisto e incasso minimo di vendita = quotazione del giocatore."
+    )
+
+    squadre_mr = get_nomi_squadre()
+    if not squadre_mr:
+        st.info("Nessuna squadra configurata.")
+    else:
+        # ---------- SELEZIONE SQUADRA / BUDGET / FILTRI ----------
+        sq_mr = st.selectbox("La mia squadra", squadre_mr, key="mr_squadra")
+        rosa_mr = [g for g in rosa_proprieta(sq_mr)]
+
+        crediti_mr = int(st.session_state.squadre[sq_mr].get("crediti", 0))
+        c_a, c_b, c_c = st.columns([1, 1, 1.4])
+        with c_a:
+            crediti_extra_mr = st.number_input(
+                "Crediti extra (a disposizione)", min_value=0, max_value=1000,
+                value=50, step=5, key="mr_extra",
+                help="Budget extra messo a disposizione oltre ai crediti residui della squadra.",
+            )
+        with c_b:
+            solo_perc_mr = st.checkbox("Solo sostituti alla mia portata", value=True, key="mr_perc",
+                                       help="Mostra come consigliato solo chi puoi pagare con il budget disponibile")
+        with c_c:
+            budget_tot_mr = crediti_mr + int(crediti_extra_mr)
+            st.markdown(
+                f"<div style='padding:10px;border-radius:10px;background:rgba(201,169,110,0.12);"
+                f"border:1px solid rgba(201,169,110,0.45);'>"
+                f"<b>💰 Budget a disposizione</b><br>"
+                f"Crediti residui <b>{crediti_mr}cr</b> + extra <b>{int(crediti_extra_mr)}cr</b> "
+                f"= <b style='color:#ffd700'>{budget_tot_mr}cr</b></div>",
+                unsafe_allow_html=True,
+            )
+
+        if not rosa_mr:
+            st.warning("La tua rosa è vuota: aggiungi prima qualche giocatore.")
+        else:
+            st.markdown("---")
+            st.markdown("<div class='fm-section-title'>1️⃣ Scegli chi vuoi cambiare</div>", unsafe_allow_html=True)
+            st.caption("Filtra la rosa e spunta i giocatori che secondo te vanno sostituiti (anche più di uno).")
+
+            fcol1, fcol2 = st.columns([1, 2])
+            with fcol1:
+                ruoli_map_mr = {"Tutti": None, "P": "Portieri", "D": "Difensori", "C": "Centrocampisti", "A": "Attaccanti"}
+                ruolo_f_mr = st.selectbox("Filtra per ruolo", list(ruoli_map_mr.keys()), key="mr_ruolo_filt")
+            with fcol2:
+                ordina_mr = st.radio(
+                    "Ordina per",
+                    ["FantaMedia (più deboli prima)", "FantaMedia (più forti prima)", "Quotazione", "Nome"],
+                    horizontal=True, key="mr_ordina",
+                )
+
+            def _fm_usata_mr(g):
+                f = _get_fm_2627(g["Nome"])
+                if f is None:
+                    try:
+                        f = float(g.get("FantaMedia", 6.0) or 6.0)
+                    except (TypeError, ValueError):
+                        f = 6.0
+                return f
+
+            righe_mr = []
+            for g in rosa_mr:
+                righe_mr.append({
+                    "Nome": g["Nome"],
+                    "Ruolo": g.get("Ruolo", "C"),
+                    "Squadra": g.get("Squadra_SerieA", ""),
+                    "FM": round(_fm_usata_mr(g), 2),
+                    "Quot.": int(g.get("Quotazione", 0) or 0),
+                    "Consiglio": g.get("Consiglio", ""),
+                    "Scadenza": g.get("Scadenza_Anno", ""),
+                })
+            df_rosa_mr = pd.DataFrame(righe_mr)
+
+            if ruolo_f_mr != "Tutti":
+                df_rosa_mr = df_rosa_mr[df_rosa_mr["Ruolo"] == ruolo_f_mr]
+
+            if df_rosa_mr.empty:
+                st.info("Nessun giocatore in rosa con questo filtro.")
+            else:
+                if ordina_mr.startswith("FantaMedia (più deboli"):
+                    df_rosa_mr = df_rosa_mr.sort_values("FM", ascending=True)
+                elif ordina_mr.startswith("FantaMedia (più forti"):
+                    df_rosa_mr = df_rosa_mr.sort_values("FM", ascending=False)
+                elif ordina_mr == "Quotazione":
+                    df_rosa_mr = df_rosa_mr.sort_values("Quot.", ascending=False)
+                else:
+                    df_rosa_mr = df_rosa_mr.sort_values("Nome")
+
+                df_rosa_mr = df_rosa_mr.reset_index(drop=True)
+
+                try:
+                    sel_edit = st.data_editor(
+                        df_rosa_mr,
+                        use_container_width=True,
+                        hide_index=True,
+                        key="mr_editor_rosa",
+                        column_config={
+                            "Cambia": st.column_config.CheckboxColumn("Cambia?", default=False),
+                            "Nome": st.column_config.TextColumn("Nome", disabled=True),
+                            "Ruolo": st.column_config.TextColumn("R", disabled=True, width="small"),
+                            "Squadra": st.column_config.TextColumn("Squadra", disabled=True),
+                            "FM": st.column_config.NumberColumn("FantaMedia", disabled=True, format="%.2f"),
+                            "Quot.": st.column_config.NumberColumn("Quot.", disabled=True, format="%d cr"),
+                            "Consiglio": st.column_config.TextColumn("Fascia", disabled=True),
+                            "Scadenza": st.column_config.NumberColumn("Scad.", disabled=True, format="%d"),
+                        },
+                    )
+                    cambia_list_mr = sel_edit.loc[sel_edit["Cambia"].fillna(False).astype(bool), "Nome"].tolist()
+                except Exception:
+                    st.caption("Editor a griglia non disponibile: usa le caselle qui sotto.")
+                    cambia_list_mr = []
+                    for _, r in df_rosa_mr.iterrows():
+                        et = f"{r['Nome']} ({r['Ruolo']}, FM {r['FM']}, {int(r['Quot.'])}cr)"
+                        if st.checkbox(et, key=f"mr_chk_{r['Nome']}"):
+                            cambia_list_mr.append(r["Nome"])
+
+                if st.button("🗑️ Azzera selezione", key="mr_reset_sel"):
+                    st.session_state.pop("mr_editor_rosa", None)
+                    st.rerun()
+
+                # ---------- MOTORE CONSIGLI ----------
+                def _candidati_svincolati(esclusi, ruolo=None, max_prezzo=None, fm_venduto=6.0):
+                    db = st.session_state.giocatori_db
+                    sv = get_svincolati(db).copy()
+                    # non riproporre chi hai già messo in lista
+                    for n in esclusi:
+                        sv = sv[sv["Nome"].str.lower() != str(n).lower()]
+                    if ruolo:
+                        sv = sv[sv["Ruolo"] == ruolo]
+                    if sv.empty:
+                        return sv
+                    sv["Prezzo_Cons"] = sv.apply(lambda r: prezzo_consigliato_di(r.to_dict()), axis=1)
+                    sv["FM_Usata"] = sv["Nome"].apply(
+                        lambda n: _get_fm_2627(n) if _get_fm_2627(n) is not None
+                        else float(sv.loc[sv["Nome"] == n, "FantaMedia"].values[0] or 6.0))
+                    sv["Delta_FM"] = sv["FM_Usata"] - float(fm_venduto)
+                    if max_prezzo is not None:
+                        dentro = sv[sv["Prezzo_Cons"] <= max_prezzo]
+                        if not dentro.empty:
+                            sv = dentro
+                    sv["Valore"] = sv["FM_Usata"] / sv["Prezzo_Cons"].clip(lower=1)
+                    sv = sv.sort_values(["Delta_FM", "FM_Usata", "Valore"], ascending=[False, False, False])
+                    return sv
+
+                def _nome_completo_mr(row, titolo=None):
+                    nome = str(row["Nome"])
+                    sq = row.get("Squadra_SerieA", "")
+                    return f"{nome} — {sq}" if sq else nome
+
+                def _bonus_fascia_mr(g):
+                    # Bonus di gradimento della fascia (top_player preferito a parità di FM)
+                    f = g.get("Consiglio", "")
+                    if f not in CONSIGLIO_ORDINE:
+                        f = migra_consiglio_valore(g.get("Ruolo", "C"), g.get("Quotazione", 0), f)
+                    return len(CONSIGLIO_ORDINE) - CONSIGLIO_ORDINE.index(f) if f in CONSIGLIO_ORDINE else 0
+
+                def consiglia_sostituto(giocatore, esclusi, massimizza_fm=True):
+                    """Ritorna il miglior sostituto svincolato (stesso ruolo) per il giocatore."""
+                    ruolo = giocatore.get("Ruolo", "C")
+                    q = int(giocatore.get("Quotazione", 0) or 0)
+                    fm_vend = _fm_usata_mr(giocatore)
+                    budget = budget_tot_mr + q  # incasso il venduto + crediti disponibili
+                    max_prezzo = budget if solo_perc_mr else None
+                    cand = _candidati_svincolati(esclusi, ruolo=ruolo, max_prezzo=max_prezzo, fm_venduto=fm_vend)
+                    if cand is None or cand.empty:
+                        return None
+                    return cand.iloc[0].to_dict(), cand
+
+                # ---------- MOSTRA CONSIGLI ----------
+                st.markdown("---")
+                st.markdown("<div class='fm-section-title'>2️⃣ I consigli dell'IA + il tuo sostituto</div>", unsafe_allow_html=True)
+
+                if not cambia_list_mr:
+                    st.info("👆 Seleziona almeno un giocatore da cambiare, poi qui comparirà il consiglio con il miglior sostituto.")
+                    scala_mr = st.checkbox("Considera anche la scala (puoi vendere chi non spunti)?", value=False, key="mr_scala")
+                else:
+                    altri_in_rosa = [g["Nome"] for g in rosa_mr if g["Nome"] not in cambia_list_mr]
+                    scala_mr = st.checkbox("Considera anche gli ALTRI in rosa come potenziali partenti (scala)",
+                                           value=False, key="mr_scala")
+                    esclusi_set = list(altri_in_rosa) if scala_mr else []
+
+                    totale_incasso = 0
+                    totale_costo = 0
+                    riepilogo_mr = []
+
+                    for nome_sel in cambia_list_mr:
+                        gioc = next((g for g in rosa_mr if g["Nome"] == nome_sel), None)
+                        if gioc is None:
+                            continue
+                        fm_g = _fm_usata_mr(gioc)
+                        q_g = int(gioc.get("Quotazione", 0) or 0)
+
+                        res = consiglia_sostituto(gioc, esclusi_set)
+                        if res is None:
+                            st.markdown(f"#### 🔄 {nome_sel} ({gioc.get('Ruolo','')}) — FM {fm_g:.2f}")
+                            st.caption("Nessuno svincolato utile per questo ruolo (o fuori budget).")
+                            continue
+                        cons, cand_df = res
+
+                        # possibilità di scegliere un altro sostituto
+                        opzioni_nomi = [_nome_completo_mr(r) for _, r in cand_df.iterrows()]
+                        cons_label = _nome_completo_mr(pd.Series(cons))
+                        idx_cons = opzioni_nomi.index(cons_label) if cons_label in opzioni_nomi else 0
+                        scelta = st.selectbox(
+                            f"🔄 {nome_sel} ({gioc.get('Ruolo','')}) — FM {fm_g:.2f} · {q_g}cr → scegli il sostituto",
+                            opzioni_nomi, index=idx_cons, key=f"mr_scelta_{nome_sel}",
+                        )
+                        scelta_nome = scelta.split(" — ")[0]
+                        sc_row = cand_df[cand_df["Nome"] == scelta_nome]
+                        if sc_row.empty:
+                            sc_row = cand_df.iloc[[idx_cons]]
+                        sc = sc_row.iloc[0]
+
+                        fm_s = float(sc["FM_Usata"])
+                        prezzo_s = int(sc["Prezzo_Cons"])
+                        delta_fm = fm_s - fm_g
+                        costo_netto = prezzo_s - q_g
+                        totale_incasso += q_g
+                        totale_costo += prezzo_s
+
+                        auto = "🎯 consigliato dall'IA" if scelta_nome == cons["Nome"] else "✋ scelto da te"
+                        colore_d = "#4ade80" if delta_fm > 0 else ("#ef4444" if delta_fm < 0 else "#94a3b8")
+                        st.markdown(
+                            f"<div style='border-left:4px solid {colore_d};padding:8px 12px;margin:6px 0;"
+                            f"background:rgba(255,255,255,0.03);border-radius:8px;'>"
+                            f"<b>Vendi</b> {nome_sel} ({gioc.get('Ruolo','')}, FM {fm_g:.2f}) → "
+                            f"incassi <b>{q_g}cr</b><br>"
+                            f"<b>Prendi</b> {scelta_nome} ({sc.get('Ruolo','')}, {sc.get('Squadra_SerieA','')}, "
+                            f"FM {fm_s:.2f}) → costo <b>{prezzo_s}cr</b> &nbsp;·&nbsp; "
+                            f"<span style='color:{colore_d}'><b>Δ FM {delta_fm:+.2f}</b></span> "
+                            f"&nbsp;·&nbsp; costo netto <b>{costo_netto:+d}cr</b> &nbsp;·&nbsp; <i>{auto}</i></div>",
+                            unsafe_allow_html=True,
+                        )
+                        riepilogo_mr.append({
+                            "Esce": nome_sel, "FM esce": round(fm_g, 2), "Incasso": q_g,
+                            "Entra": scelta_nome, "FM entra": round(fm_s, 2),
+                            "Δ FM": round(delta_fm, 2), "Costo": prezzo_s, "Costo netto": costo_netto,
+                            "Scelta": auto,
+                        })
+
+                    # ---------- RIEPILOGO SCAMBI ----------
+                    if riepilogo_mr:
+                        st.markdown("---")
+                        st.markdown("<div class='fm-section-title'>3️⃣ Riepilogo dei cambi selezionati</div>", unsafe_allow_html=True)
+                        r1, r2, r3, r4 = st.columns(4)
+                        r1.metric("Giocatori da cambiare", len(riepilogo_mr))
+                        r2.metric("Incassi (vendite)", f"{totale_incasso}cr")
+                        r3.metric("Spesa (acquisti)", f"{totale_costo}cr")
+                        netto_mr = totale_incasso - totale_costo
+                        r4.metric("Saldo", f"{netto_mr:+d}cr",
+                                  delta=f"bonus FM tot {sum(r['Δ FM'] for r in riepilogo_mr):+.2f}")
+
+                        if netto_mr < 0 and abs(netto_mr) > (crediti_mr + int(crediti_extra_mr)):
+                            st.error(f"⚠️ Ti servono {abs(netto_mr)}cr ma hai {budget_tot_mr}cr di budget: rivedi qualche scelta.")
+                        elif netto_mr < 0:
+                            st.success(f"✅ Operazione sostenibile: esborso netto di {abs(netto_mr)}cr, entro il budget di {budget_tot_mr}cr.")
+                        else:
+                            st.success(f"✅ Con questi cambi incassi {netto_mr}cr netti.")
+
+                        st.dataframe(pd.DataFrame(riepilogo_mr), use_container_width=True, hide_index=True)
+
+                        # ---- APPLICA GLI SCAMBI ----
+                        if st.button("✅ Applica questi cambi alla mia rosa", type="primary", key="mr_applica"):
+                            StateManager.snapshot()
+                            crediti_disp = int(st.session_state.squadre[sq_mr].get("crediti", 0)) + int(crediti_extra_mr)
+                            errori = []
+                            nuovi = []
+                            for r in riepilogo_mr:
+                                if r["Costo"] > crediti_disp:
+                                    errori.append(f"{r['Entra']} costa {r['Costo']}cr ma restano {crediti_disp}cr")
+                                    continue
+                                crediti_disp += r["Incasso"]
+                                crediti_disp -= r["Costo"]
+                                nome_entra = r["Entra"]
+                                db = st.session_state.giocatori_db
+                                match = db[db["Nome"].str.lower() == nome_entra.lower()]
+                                if match.empty:
+                                    errori.append(f"{nome_entra} non trovato nel listone")
+                                    continue
+                                info = match.iloc[0].to_dict()
+                                scad = datetime.now().year + CONTRATTO_ANNI
+                                nuovo = {
+                                    "Nome": info["Nome"], "Ruolo": info["Ruolo"],
+                                    "Squadra_SerieA": info["Squadra_SerieA"],
+                                    "Quotazione": int(info["Quotazione"]),
+                                    "FantaMedia": float(info["FantaMedia"]),
+                                    "Costo_Acquisto": int(r["Costo"]),
+                                    "Scadenza_Anno": scad, "Scadenza_Mese": datetime.now().month,
+                                }
+                                nuovi.append((r["Esce"], nuovo))
+                            if errori:
+                                for e in errori:
+                                    st.error("❌ " + e)
+                            else:
+                                nomi_escono = [r["Esce"] for r in riepilogo_mr]
+                                st.session_state.squadre[sq_mr]["rosa"] = [
+                                    g for g in st.session_state.squadre[sq_mr]["rosa"] if g["Nome"] not in nomi_escono
+                                ]
+                                for _, nuovo in nuovi:
+                                    st.session_state.squadre[sq_mr]["rosa"].append(nuovo)
+                                    st.session_state.contratti[nuovo["Nome"]] = {
+                                        "squadra": sq_mr, "scadenza_anno": nuovo["Scadenza_Anno"],
+                                        "scadenza_mese": nuovo["Scadenza_Mese"],
+                                    }
+                                st.session_state.squadre[sq_mr]["crediti"] = crediti_disp
+                                st.session_state.storico_mercato.insert(0, {
+                                    "Data": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                    "Operazione": "MIGLIORA ROSA",
+                                    "Dettagli": "; ".join(
+                                        f"{r['Esce']} → {r['Entra']} (FM {r['Δ FM']:+.2f}, netto {r['Costo netto']:+d}cr)"
+                                        for r in riepilogo_mr),
+                                })
+                                invalidate_cache()
+                                save_state()
+                                st.success("🎉 Rosa aggiornata! Vai su 📋 Rose & Contratti per vederla.")
+                                st.rerun()
+
+                        # ---------- SIMULAZIONE FORMAZIONE ----------
+                        with st.expander("🎮 Simula la formazione dopo questi cambi"):
+                            mod_mr = st.selectbox("Modulo", ["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-3-2", "5-4-1"], key="mr_modulo")
+                            rosa_att = rosa_proprieta(sq_mr)
+                            fm_att, _, _ = simula_formazione(sq_mr, mod_mr)
+                            rosa_post = [g for g in rosa_att if g["Nome"] not in [r["Esce"] for r in riepilogo_mr]]
+                            db_all = st.session_state.giocatori_db
+                            for r in riepilogo_mr:
+                                m = db_all[db_all["Nome"].str.lower() == r["Entra"].lower()]
+                                if not m.empty:
+                                    rosa_post.append(m.iloc[0].to_dict())
+                            # FM titolare stimata post-cambi
+                            enriched = []
+                            for g in rosa_post:
+                                gg = dict(g)
+                                f = _get_fm_2627(g["Nome"])
+                                gg["FantaMedia_Usata"] = f if f is not None else float(g.get("FantaMedia", 0) or 0)
+                                enriched.append(gg)
+                            dfp = pd.DataFrame(enriched)
+                            try:
+                                d_m, c_m, a_m = map(int, mod_mr.split("-"))
+                                fm_post = 0.0
+                                for ruolo, n in [("P", 1), ("D", d_m), ("C", c_m), ("A", a_m)]:
+                                    sub = dfp[dfp["Ruolo"] == ruolo].sort_values("FantaMedia_Usata", ascending=False)
+                                    fm_post += float(sub.head(n)["FantaMedia_Usata"].sum())
+                                col_s1, col_s2 = st.columns(2)
+                                col_s1.metric("FM titolare ADESSO", f"{fm_att:.2f}")
+                                col_s2.metric("FM titolare DOPO i cambi", f"{fm_post:.2f}", f"{fm_post - fm_att:+.2f}")
+                            except Exception:
+                                st.caption("Simulazione non disponibile.")
+
+
+# ============================================================
 # 10. AFFARI — I MIGLIORI GIOCATORI A BASSO COSTO
 # ============================================================
 elif menu == "💎 Affari":
@@ -5554,255 +5911,3 @@ elif menu == "💎 Affari":
             st.scatter_chart(scatter_df, x="Prezzo_Cons", y="FantaMedia", color="Ruolo", height=360)
         except Exception:
             pass
-
-
-# ============================================================
-# 12. MIGLIORA ROSA — CONFRONTO FANTAMEDIA vs SVINCOLATI
-# ============================================================
-elif menu == "⚖️ Migliora Rosa":
-    st.header("⚖️ Migliora Rosa")
-    st.caption("Confronta la FantaMedia dei tuoi giocatori con quella degli svincolati e scopri chi acquistare e chi vendere per alzare la media della rosa.")
-
-    _ruoli_nome = {"P": "🧤 Portieri", "D": "🛡️ Difensori", "C": "⚙️ Centrocampisti", "A": "⚔️ Attaccanti"}
-    _ruoli_ordine = ["P", "D", "C", "A"]
-
-    squadre_list = get_nomi_squadre()
-    if not squadre_list:
-        st.info("Nessuna squadra configurata.")
-    else:
-        colA, colB, colC, colD = st.columns([2, 1, 1, 1])
-        with colA:
-            sq_mia = st.selectbox("La mia squadra", squadre_list, key="migliora_squadra")
-        with colB:
-            crediti_bonus = st.number_input("Crediti extra a disposizione", min_value=0, value=50, step=5, key="migliora_bonus",
-                                            help="Crediti aggiuntivi che hai per rinforzare la rosa (oltre a quelli residui della squadra).")
-        with colC:
-            solo_budget_mig = st.checkbox("Solo scambi sostenibili col budget", value=True, key="migliora_budget")
-        with colD:
-            soglia_delta = st.slider("Guadagno FM minimo", 0.0, 1.0, 0.2, 0.1, key="migliora_soglia",
-                                     help="Suggerisco uno scambio solo se lo svincolato ha almeno questo vantaggio di FantaMedia sul tuo giocatore.")
-
-        db = st.session_state.giocatori_db
-        svinc_all = get_svincolati(db).copy()
-        svinc_all["FantaMedia"] = pd.to_numeric(svinc_all["FantaMedia"], errors="coerce")
-        svinc_all["Quotazione"] = pd.to_numeric(svinc_all["Quotazione"], errors="coerce")
-
-        crediti_mia = st.session_state.squadre[sq_mia]["crediti"]
-        budget_disponibile = crediti_mia + int(crediti_bonus)
-        rosa_mia = st.session_state.squadre[sq_mia]["rosa"]
-
-        def _fm_giocatore(g):
-            fm = g.get("FantaMedia")
-            if fm is None or (isinstance(fm, float) and pd.isna(fm)):
-                info = get_db_info(g.get("Nome", ""))
-                if info and info.get("FantaMedia") is not None:
-                    fm = info.get("FantaMedia")
-            try:
-                return round(float(fm), 2)
-            except (TypeError, ValueError):
-                return None
-
-        def _quot_giocatore(g):
-            q = g.get("Quotazione")
-            if q is None or (isinstance(q, float) and pd.isna(q)):
-                info = get_db_info(g.get("Nome", ""))
-                if info and info.get("Quotazione") is not None:
-                    q = info.get("Quotazione")
-            try:
-                return int(round(float(q)))
-            except (TypeError, ValueError):
-                return None
-
-        righe_rosa = []
-        for g in rosa_mia:
-            righe_rosa.append({
-                "Nome": g.get("Nome", "?"),
-                "Ruolo": g.get("Ruolo", "?"),
-                "Squadra_SerieA": g.get("Squadra_SerieA", ""),
-                "FantaMedia": _fm_giocatore(g),
-                "Quotazione": _quot_giocatore(g),
-            })
-        df_rosa = pd.DataFrame(righe_rosa)
-
-        if df_rosa.empty:
-            st.warning("La rosa di **" + sq_mia + "** è vuota: inserisci dei giocatori per usare questo confronto.")
-        else:
-            # Prezzo minimo di acquisto e di vendita = quotazione. Budget = crediti residui + crediti extra.
-            svinc_budget = svinc_all.copy()
-
-            fm_rosa_mean = df_rosa["FantaMedia"].dropna().mean()
-            st.markdown("<div class='fm-section-title'>📊 Panoramica</div>", unsafe_allow_html=True)
-            st.caption("Regola di mercato: il prezzo minimo sia d'acquisto sia di vendita è la quotazione del giocatore.")
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Giocatori in rosa", len(df_rosa))
-            m2.metric("FantaMedia media rosa", ("%.2f" % fm_rosa_mean) if pd.notna(fm_rosa_mean) else "—")
-            m3.metric("Svincolati disponibili", len(svinc_budget))
-            m4.metric("Budget disponibile", str(budget_disponibile) + "cr",
-                      delta="+" + str(int(crediti_bonus)) + "cr extra")
-
-            st.markdown("---")
-            st.markdown("<div class='fm-section-title'>⚖️ FantaMedia media: la tua rosa vs gli svincolati</div>", unsafe_allow_html=True)
-
-            cmp_rows = []
-            for r in _ruoli_ordine:
-                mia_r = df_rosa[df_rosa["Ruolo"] == r]["FantaMedia"].dropna()
-                sv_r = svinc_budget[svinc_budget["Ruolo"] == r]["FantaMedia"].dropna()
-                top3_sv = sv_r.sort_values(ascending=False).head(3)
-                cmp_rows.append({
-                    "Ruolo": _ruoli_nome[r],
-                    "FM media rosa": round(mia_r.mean(), 2) if not mia_r.empty else None,
-                    "FM media svincolati": round(sv_r.mean(), 2) if not sv_r.empty else None,
-                    "FM top3 svincolati": round(top3_sv.mean(), 2) if not top3_sv.empty else None,
-                    "N. miei": len(mia_r),
-                    "N. svincolati": len(sv_r),
-                })
-            df_cmp = pd.DataFrame(cmp_rows)
-            st.dataframe(df_cmp, use_container_width=True, hide_index=True)
-
-            try:
-                chart_df = df_cmp.dropna(subset=["FM media rosa"]).set_index("Ruolo")[["FM media rosa", "FM top3 svincolati"]]
-                if not chart_df.empty:
-                    st.bar_chart(chart_df, height=300)
-                    st.caption("Dove la barra 'top3 svincolati' supera 'media rosa', c'è margine di miglioramento sul mercato.")
-            except Exception:
-                pass
-
-            st.markdown("---")
-            st.markdown("<div class='fm-section-title'>🔁 Upgrade consigliati (vendi uno, prendi uno migliore)</div>", unsafe_allow_html=True)
-            st.caption("Abbino i tuoi giocatori più deboli con lo svincolato libero più forte dello stesso ruolo. Compri alla quotazione dello svincolato e incassi la quotazione di chi vendi; conta solo il costo netto sul budget.")
-
-            # 1) costruisco tutti i possibili abbinamenti (il migliore mio-debole vs migliore svincolato per ruolo)
-            candidati = []
-            for r in _ruoli_ordine:
-                miei = df_rosa[(df_rosa["Ruolo"] == r) & (df_rosa["FantaMedia"].notna())].sort_values("FantaMedia")
-                sv_r = svinc_budget[(svinc_budget["Ruolo"] == r) & (svinc_budget["FantaMedia"].notna())].sort_values("FantaMedia", ascending=False)
-                sv_list = sv_r.to_dict("records")
-                usati = 0
-                for _, mio in miei.iterrows():
-                    if usati >= len(sv_list):
-                        break
-                    cand = sv_list[usati]
-                    delta = cand["FantaMedia"] - mio["FantaMedia"]
-                    if delta >= soglia_delta:
-                        costo_acq = int(cand["Quotazione"]) if pd.notna(cand["Quotazione"]) else 0
-                        incasso = int(mio["Quotazione"]) if pd.notna(mio["Quotazione"]) else 0
-                        candidati.append({
-                            "Ruolo": r,
-                            "vendi": mio["Nome"],
-                            "fm_attuale": round(mio["FantaMedia"], 2),
-                            "compra": cand["Nome"],
-                            "fm_nuovo": round(cand["FantaMedia"], 2),
-                            "guadagno": round(delta, 2),
-                            "costo_acq": costo_acq,
-                            "incasso": incasso,
-                            "costo_netto": costo_acq - incasso,
-                            "serieA": cand.get("Squadra_SerieA", ""),
-                        })
-                        usati += 1
-
-            # 2) ordino per miglior guadagno FM e, se richiesto, seleziono solo quelli sostenibili col budget
-            candidati.sort(key=lambda x: x["guadagno"], reverse=True)
-            upgrade_rows = []
-            comprare_nomi = set()
-            vendere_nomi = set()
-            spesa_netta_cum = 0
-            scartati_budget = 0
-            for c in candidati:
-                if solo_budget_mig and (spesa_netta_cum + c["costo_netto"] > budget_disponibile):
-                    scartati_budget += 1
-                    continue
-                spesa_netta_cum += c["costo_netto"]
-                upgrade_rows.append({
-                    "❌ Vendi": c["vendi"],
-                    "FM attuale": c["fm_attuale"],
-                    "✅ Compra (svincolato)": c["compra"],
-                    "FM nuovo": c["fm_nuovo"],
-                    "Guadagno FM": c["guadagno"],
-                    "Incassi (quot.)": c["incasso"],
-                    "Costo acq. (quot.)": c["costo_acq"],
-                    "Costo netto": c["costo_netto"],
-                    "Squadra SerieA": c["serieA"],
-                })
-                comprare_nomi.add(c["compra"])
-                vendere_nomi.add(c["vendi"])
-
-            if upgrade_rows:
-                df_up = pd.DataFrame(upgrade_rows)
-                st.dataframe(df_up, use_container_width=True, hide_index=True)
-
-                guadagno_tot = df_up["Guadagno FM"].sum()
-                costo_netto_tot = int(df_up["Costo netto"].sum())
-                nuova_media = fm_rosa_mean + (guadagno_tot / len(df_rosa)) if pd.notna(fm_rosa_mean) and len(df_rosa) else fm_rosa_mean
-                residuo = budget_disponibile - costo_netto_tot
-                k1, k2, k3, k4 = st.columns(4)
-                k1.metric("Scambi suggeriti", len(df_up))
-                k2.metric("FantaMedia rosa proiettata", ("%.2f" % nuova_media) if pd.notna(nuova_media) else "—",
-                          delta=("+%.2f" % (nuova_media - fm_rosa_mean)) if pd.notna(nuova_media) and pd.notna(fm_rosa_mean) else None)
-                k3.metric("Costo netto totale", str(costo_netto_tot) + "cr")
-                k4.metric("Budget residuo", str(residuo) + "cr", delta=str(residuo) + "cr")
-                if scartati_budget > 0:
-                    st.info("ℹ️ " + str(scartati_budget) + " ulteriori upgrade sono stati esclusi perché sforavano il budget disponibile (" + str(budget_disponibile) + "cr). Aumenta i crediti extra o vendi altri giocatori per sbloccarli.")
-                if not solo_budget_mig and costo_netto_tot > budget_disponibile:
-                    st.warning("⚠️ Il costo netto totale (" + str(costo_netto_tot) + "cr) supera il budget disponibile (" + str(budget_disponibile) + "cr): attiva 'Solo scambi sostenibili col budget' o rinuncia agli upgrade meno convenienti.")
-            else:
-                if candidati and solo_budget_mig:
-                    st.warning("⚠️ Ci sarebbero " + str(len(candidati)) + " upgrade utili ma nessuno rientra nel budget disponibile (" + str(budget_disponibile) + "cr). Aumenta i crediti extra o abbassa le pretese.")
-                else:
-                    st.success("✅ Nessun upgrade evidente: la tua rosa è già competitiva rispetto agli svincolati disponibili (oppure alza la soglia di guadagno FM).")
-
-            st.markdown("---")
-            st.markdown("<div class='fm-section-title'>🟢 Chi acquistare per migliorare</div>", unsafe_allow_html=True)
-            st.caption("Svincolati con FantaMedia superiore alla media della tua rosa nel loro ruolo. Il costo d'acquisto minimo è la quotazione.")
-
-            medie_ruolo_mia = {r: df_rosa[df_rosa["Ruolo"] == r]["FantaMedia"].dropna().mean() for r in _ruoli_ordine}
-            buy_frames = []
-            for r in _ruoli_ordine:
-                soglia_r = medie_ruolo_mia.get(r)
-                sv_r = svinc_budget[(svinc_budget["Ruolo"] == r) & (svinc_budget["FantaMedia"].notna())].copy()
-                if pd.notna(soglia_r):
-                    sv_r = sv_r[sv_r["FantaMedia"] > soglia_r]
-                sv_r = sv_r.sort_values("FantaMedia", ascending=False).head(5)
-                if not sv_r.empty:
-                    sv_r["Priorità"] = sv_r["Nome"].isin(comprare_nomi).map({True: "⭐ upgrade diretto", False: ""})
-                    sv_r["Entro budget"] = sv_r["Quotazione"].fillna(0).le(budget_disponibile).map({True: "✅", False: "❌"})
-                    buy_frames.append(sv_r)
-            if buy_frames:
-                df_buy = pd.concat(buy_frames, ignore_index=True)
-                df_buy = df_buy.rename(columns={"Quotazione": "Costo min. (quot.)"})
-                cols_buy = [c for c in ["Nome", "Ruolo", "Squadra_SerieA", "FantaMedia", "Costo min. (quot.)", "Entro budget", "Consiglio", "Priorità"] if c in df_buy.columns]
-                st.dataframe(df_buy[cols_buy], use_container_width=True, hide_index=True)
-            else:
-                st.info("Nessuno svincolato supera la media della tua rosa nei vari ruoli: sei messo bene!")
-
-            st.markdown("---")
-            st.markdown("<div class='fm-section-title'>🔴 Chi vendere / sostituire</div>", unsafe_allow_html=True)
-            st.caption("I tuoi giocatori con FantaMedia sotto la media del loro ruolo e per cui esiste uno svincolato migliore. Vendendoli incassi (come minimo) la loro quotazione.")
-
-            sell_rows = []
-            for r in _ruoli_ordine:
-                soglia_r = medie_ruolo_mia.get(r)
-                sv_fm_r = svinc_budget[(svinc_budget["Ruolo"] == r) & (svinc_budget["FantaMedia"].notna())]["FantaMedia"]
-                best_sv = sv_fm_r.max() if not sv_fm_r.empty else None
-                miei_r = df_rosa[(df_rosa["Ruolo"] == r) & (df_rosa["FantaMedia"].notna())]
-                for _, mio in miei_r.iterrows():
-                    sotto_media = pd.notna(soglia_r) and mio["FantaMedia"] < soglia_r
-                    esiste_meglio = (best_sv is not None) and pd.notna(best_sv) and best_sv > mio["FantaMedia"]
-                    if sotto_media and esiste_meglio:
-                        sell_rows.append({
-                            "Nome": mio["Nome"],
-                            "Ruolo": mio["Ruolo"],
-                            "Squadra_SerieA": mio["Squadra_SerieA"],
-                            "FantaMedia": mio["FantaMedia"],
-                            "Incasso min. (quot.)": int(mio["Quotazione"]) if pd.notna(mio["Quotazione"]) else None,
-                            "Media ruolo rosa": round(soglia_r, 2),
-                            "Miglior svincolato": round(best_sv, 2),
-                            "Nota": "⭐ già in un upgrade" if mio["Nome"] in vendere_nomi else "candidato",
-                        })
-            if sell_rows:
-                df_sell = pd.DataFrame(sell_rows).sort_values("FantaMedia")
-                st.dataframe(df_sell, use_container_width=True, hide_index=True)
-            else:
-                st.success("✅ Nessun giocatore da vendere: la rosa è equilibrata rispetto agli svincolati disponibili.")
-
-            st.markdown("---")
-            st.caption("💡 Regole applicate: prezzo minimo d'acquisto e di vendita = quotazione del giocatore; budget = crediti residui della squadra + crediti extra impostati in alto. Il 'costo netto' di uno scambio è (quotazione di chi compri) − (quotazione di chi vendi).")
