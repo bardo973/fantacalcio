@@ -952,6 +952,205 @@ def _get_fm_2627(nome):
         return float(match.iloc[0]["FantaMedia"])
     return None
 
+
+def _stat_row_2627(nome):
+    """Ritorna la riga statistiche 2026-27 del giocatore (o None)."""
+    if "stats_per_stagione" not in st.session_state:
+        return None
+    if "2026-27" not in st.session_state.stats_per_stagione:
+        return None
+    s2627 = st.session_state.stats_per_stagione["2026-27"]
+    if s2627 is None or s2627.empty or "Nome" not in s2627.columns:
+        return None
+    match = s2627[s2627["Nome"].str.lower() == str(nome).lower()]
+    if match.empty:
+        nm = fuzzy_match(nome, s2627["Nome"].tolist())
+        if nm:
+            match = s2627[s2627["Nome"] == nm]
+    if match.empty:
+        return None
+    return match.iloc[0]
+
+
+def _num_from_row(row, aliases):
+    """Legge un valore numerico da una riga pandas provando più nomi colonna."""
+    if row is None:
+        return None
+    for a in aliases:
+        for col in row.index:
+            if str(col).strip().lower() == a.lower():
+                v = row[col]
+                if pd.notna(v):
+                    try:
+                        return float(v)
+                    except (TypeError, ValueError):
+                        pass
+    return None
+
+
+# ============================================================
+# 🎭 PROFILO GIOCATORE — BONUS vs CONTINUITÀ
+# ============================================================
+def profilo_giocatore(nome, ruolo=None, fantamedia=None, quotazione=None):
+    """Classifica un giocatore in base al suo rendimento.
+
+    Ritorna un dict con:
+      - tipo: 'bonus' | 'affidabile' | 'equilibrato' | 'sconosciuto'
+      - label, emoji, colore, descrizione
+      - bonus_score: bonus prodotti per partita (gol+assist+rigori)/partite
+      - media_voto, fantamedia, partite, gol, assist, rigori (se disponibili)
+      - affidabilita: 0-100 (quanto è costante / voto alto)
+      - propensione_bonus: 0-100 (quanto è 'boom or bust')
+
+    Logica: se ha statistiche 2026-27 con Partite > 0, confronta i bonus
+    prodotti per partita con la differenza (Fantamedia - Media_Voto),
+    che è la spia tipica dei portatori di bonus. Senza statistiche, usa
+    la FantaMedia come proxy del voto medio.
+    """
+    riga = _stat_row_2627(nome)
+
+    partite = media_voto = gol = assist = rigori = fantamedia_s = None
+    if riga is not None:
+        partite = _num_from_row(riga, ["Partite", "Presenze", "PG", "P"])
+        media_voto = _num_from_row(riga, ["Media Voto", "Media voto", "MV", "Voto medio"])
+        gol = _num_from_row(riga, ["Gol", "Goal", "Gol fatti", "Goal fatti", "Reti", "GF"])
+        assist = _num_from_row(riga, ["Assist", "Ass", "A"])
+        rigori = _num_from_row(riga, ["Rigori", "Rig", "Rigori segnati"])
+        fantamedia_s = _num_from_row(riga, ["FantaMedia", "Fanta Media", "FM"])
+
+    fm = fantamedia if fantamedia is not None else (fantamedia_s if fantamedia_s is not None else None)
+    mv = media_voto
+
+    if partite is None or partite <= 0:
+        # Niente statistiche di dettaglio: classifico con la FantaMedia come proxy.
+        if fm is None:
+            return {
+                "tipo": "sconosciuto", "label": "Dati insufficienti", "emoji": "❔",
+                "colore": "#888888", "descrizione": "Statistiche non ancora caricate per questo giocatore.",
+                "affidabilita": None, "propensione_bonus": None,
+                "bonus_score": None, "media_voto": None, "fantamedia": None,
+                "partite": None, "gol": None, "assist": None, "rigori": None,
+            }
+        # Stima: FantaMedia alta senza dettaglio -> probabile affidabile.
+        fm = float(fm)
+        affidabilita = min(100, max(0, round((fm - 5.0) / 5.0 * 100, 1)))
+        prop = min(100, max(0, round((fm - 6.5) / 3.5 * 100, 1)))
+        return {
+            "tipo": "equilibrato", "label": "Dati parziali", "emoji": "⚖️",
+            "colore": "#a78bfa",
+            "descrizione": "Carica le statistiche 2026-27 per una stima più precisa del profilo.",
+            "affidabilita": affidabilita, "propensione_bonus": prop,
+            "bonus_score": None, "media_voto": mv, "fantamedia": round(fm, 2),
+            "partite": None, "gol": gol, "assist": assist, "rigori": rigori,
+        }
+
+    partite = float(partite)
+    gol = float(gol or 0)
+    assist = float(assist or 0)
+    rigori = float(rigori or 0)
+    bonus_totali = gol + assist + rigori
+    bonus_score = bonus_totali / partite
+
+    if mv is None:
+        # proxy: FantaMedia - contributo bonus stimato (6 + bonus/partita - voto base)
+        mv = (fm if fm is not None else 6.0) - bonus_score
+    else:
+        mv = float(mv)
+
+    if fm is None:
+        fm = mv + bonus_score
+    fm = float(fm)
+
+    # 📈 Affidabilità: quanto il voto è alto e stabile (0-100).
+    affidabilita = min(100, max(0, round((mv - 5.0) / 3.0 * 100, 1)))
+
+    # 🎯 Propensione bonus: bonus per partita (0-100). Un bonus/partita è
+    # già un profilo 'boom'; 0.5+ è un vero portatore di bonus.
+    propensione_bonus = min(100, max(0, round(bonus_score / 0.8 * 100, 1)))
+
+    # Differenza FantaMedia - MediaVoto = spinta dei bonus.
+    spinta = fm - mv
+
+    soglia_partite = 8  # sotto questa soglia il campione è poco affidabile
+    if partite < soglia_partite:
+        return {
+            "tipo": "equilibrato", "label": "Campione ridotto", "emoji": "⚠️",
+            "colore": "#f59e0b",
+            "descrizione": f"Solo {int(partite)} partite: profilo non ancora affidabile.",
+            "affidabilita": affidabilita, "propensione_bonus": propensione_bonus,
+            "bonus_score": round(bonus_score, 2), "media_voto": round(mv, 2),
+            "fantamedia": round(fm, 2), "partite": int(partite),
+            "gol": int(gol), "assist": int(assist), "rigori": int(rigori),
+        }
+
+    if propensione_bonus >= 55 and spinta >= 1.0:
+        tipo, label, emoji, colore = (
+            "bonus", "Portatore di bonus", "🎯", "#ef4444")
+        descrizione = (f"Boom or bust: {bonus_score:.2f} bonus/partita. "
+                       f"Porta FantaMedia alta grazie a gol/assist ({int(bonus_totali)} totali).")
+    elif affidabilita >= 62 and spinta < 0.8:
+        tipo, label, emoji, colore = (
+            "affidabile", "Affidabile / voti alti", "🧱", "#22c55e")
+        descrizione = (f"Continuità: media voto {mv:.2f}, pochissimi alti e bassi. "
+                       f"Punti sicuri anche quando non segna.")
+    else:
+        tipo, label, emoji, colore = ("equilibrato", "Equilibrato", "⚖️", "#a78bfa")
+        descrizione = (f"Profilo bilanciato: media voto {mv:.2f} e {bonus_score:.2f} bonus/partita.")
+
+    return {
+        "tipo": tipo, "label": label, "emoji": emoji, "colore": colore,
+        "descrizione": descrizione,
+        "affidabilita": affidabilita, "propensione_bonus": propensione_bonus,
+        "bonus_score": round(bonus_score, 2), "media_voto": round(mv, 2),
+        "fantamedia": round(fm, 2), "partite": int(partite),
+        "gol": int(gol), "assist": int(assist), "rigori": int(rigori),
+    }
+
+
+def badge_profilo(nome, ruolo=None, fantamedia=None, quotazione=None):
+    """Ritorna un piccolo badge HTML con il profilo del giocatore."""
+    p = profilo_giocatore(nome, ruolo, fantamedia, quotazione)
+    return (f"<span style='display:inline-block;background:{p['colore']}22;"
+            f"border:1px solid {p['colore']}66;color:{p['colore']};"
+            f"padding:2px 8px;border-radius:10px;font-size:0.72em;font-weight:bold;"
+            f"white-space:nowrap;'>{p['emoji']} {p['label']}</span>")
+
+
+def top10_per_ruolo(df=None):
+    """Ritorna i migliori 10 giocatori per ruolo (P/D/C/A) come lista di nomi.
+
+    Ordinamento: FantaMedia 2026-27 (se disponibile) altrimenti FantaMedia
+    del listone; a parità, quotazione più alta.
+    """
+    if df is None:
+        df = st.session_state.giocatori_db
+    if df is None or df.empty:
+        return {}
+    d = df.copy()
+
+    def _fm_score(r):
+        f = _get_fm_2627(r.get("Nome", ""))
+        if f is None:
+            try:
+                f = float(r.get("FantaMedia", 6.0) or 6.0)
+            except (TypeError, ValueError):
+                f = 6.0
+        return f
+
+    try:
+        d["_fm_t"] = d.apply(_fm_score, axis=1)
+    except Exception:
+        d["_fm_t"] = 6.0
+    if "Quotazione" not in d.columns:
+        d["Quotazione"] = 0
+    out = {}
+    for ruolo in ["P", "D", "C", "A"]:
+        sub = d[d.get("Ruolo") == ruolo].copy()
+        sub = sub.sort_values(["_fm_t", "Quotazione"], ascending=[False, False])
+        out[ruolo] = [str(n) for n in sub["Nome"].head(10).tolist()]
+    return out
+
+
 def simula_formazione(squadra_nome, modulo):
     rosa = st.session_state.squadre[squadra_nome]["rosa"]
     if not rosa:
@@ -2172,6 +2371,7 @@ menu = st.radio(
         "🎯 Simulatore Rosa",
         "🧩 Completa Rosa",
         "⚖️ Migliora Rosa",
+        "🎭 Profilo Bonus/Continuità",
         "💎 Affari",
         "📈 Statistiche Storiche",
         "⚙️ Importa & Esporta"
@@ -3000,6 +3200,45 @@ if menu == "🔍 Scouting & Database":
                     save_state()
                     st.rerun()
 
+            # ⭐ AUTO-COMPILA WATCHLIST — top 10 per ruolo
+            with st.expander("⭐ Compila watchlist (top 10 per ruolo)", expanded=False):
+                st.caption(
+                    "Riempie la watchlist con i **migliori 10 giocatori per ruolo** "
+                    "(🧤 P, 🛡️ D, ⚙️ C, ⚔️ A), in base a FantaMedia e quotazione. "
+                    "Poi puoi aggiungere o togliere chi vuoi con i pulsanti qui sotto."
+                )
+                _wl_mode = st.radio(
+                    "Cosa fare con la watchlist attuale",
+                    ["Aggiorna (sostituisci con i top 10)", "Aggiungi ai preferiti già presenti"],
+                    key="wl_autofill_mode", horizontal=True,
+                )
+                _wl_solo_svinc = st.checkbox(
+                    "Considera solo i giocatori svincolati (non in altre rose)",
+                    value=True, key="wl_autofill_svinc",
+                    help="Utile in asta: i top liberi che puoi ancora prendere.",
+                )
+                if st.button("⭐ Compila ora (top 10 per ruolo)", key="wl_autofill_go", use_container_width=True, type="primary"):
+                    _db_wl = df.copy()
+                    if _wl_solo_svinc:
+                        _occ = get_player_index()
+                        _db_wl = _db_wl[~_db_wl["Nome"].apply(
+                            lambda n: str(n).lower() in _occ)]
+                    _top_wl = top10_per_ruolo(_db_wl)
+                    _nuovi = []
+                    for _r in ["P", "D", "C", "A"]:
+                        _nuovi.extend(_top_wl.get(_r, []))
+                    if _wl_mode.startswith("Aggiorna"):
+                        st.session_state.watchlist = list(dict.fromkeys(_nuovi))
+                    else:
+                        _merged = list(st.session_state.watchlist)
+                        for _n in _nuovi:
+                            if _n not in _merged:
+                                _merged.append(_n)
+                        st.session_state.watchlist = _merged
+                    save_state()
+                    st.success(f"✅ Watchlist compilata: {len(_nuovi)} giocatori (top 10 per ruolo).")
+                    st.rerun()
+
             if st.session_state.watchlist:
                 df_wl = df[df["Nome"].isin(st.session_state.watchlist)].copy()
                 stats_df = st.session_state.stats_storiche if not st.session_state.stats_storiche.empty else None
@@ -3050,6 +3289,13 @@ if menu == "🔍 Scouting & Database":
                                 if pd.isna(rdict.get("Indice_Titolarita")):
                                     rdict["Indice_Titolarita"] = calcola_indice_titolarita(rdict, stats_2627_wl)
                                 st.markdown(render_flip_card(rdict, stats_ps_wl, stats_2627_wl), unsafe_allow_html=True)
+                                _prof_wl = profilo_giocatore(str(rdict.get("Nome", "")), rdict.get("Ruolo"),
+                                                             rdict.get("FantaMedia"), rdict.get("Quotazione"))
+                                st.markdown(
+                                    f"<div style='text-align:center;margin:-8px 0 4px 0;'>"
+                                    f"{badge_profilo(str(rdict.get('Nome','')), rdict.get('Ruolo'), rdict.get('FantaMedia'), rdict.get('Quotazione'))}</div>",
+                                    unsafe_allow_html=True,
+                                )
                                 nome_wl = str(rdict.get("Nome", ""))
                                 if st.button("❌ Rimuovi", key=f"wl_rm_{ruolo}_{nome_wl}", help=f"Rimuovi {nome_wl} dalla watchlist", use_container_width=True):
                                     st.session_state.watchlist = [g for g in st.session_state.watchlist if g != nome_wl]
@@ -5540,11 +5786,13 @@ elif menu == "⚖️ Migliora Rosa":
 
             righe_mr = []
             for g in rosa_mr:
+                _pf = profilo_giocatore(str(g.get("Nome", "")), g.get("Ruolo"), g.get("FantaMedia"), g.get("Quotazione"))
                 righe_mr.append({
                     "Nome": g["Nome"],
                     "Ruolo": g.get("Ruolo", "C"),
                     "Squadra": g.get("Squadra_SerieA", ""),
                     "FM": round(_fm_usata_mr(g), 2),
+                    "Profilo": f"{_pf['emoji']} {_pf['label']}",
                     "Quot.": int(g.get("Quotazione", 0) or 0),
                     "Consiglio": g.get("Consiglio", ""),
                     "Scadenza": g.get("Scadenza_Anno", ""),
@@ -5580,6 +5828,7 @@ elif menu == "⚖️ Migliora Rosa":
                             "Ruolo": st.column_config.TextColumn("R", disabled=True, width="small"),
                             "Squadra": st.column_config.TextColumn("Squadra", disabled=True),
                             "FM": st.column_config.NumberColumn("FantaMedia", disabled=True, format="%.2f"),
+                            "Profilo": st.column_config.TextColumn("Profilo", disabled=True),
                             "Quot.": st.column_config.NumberColumn("Quot.", disabled=True, format="%d cr"),
                             "Consiglio": st.column_config.TextColumn("Fascia", disabled=True),
                             "Scadenza": st.column_config.NumberColumn("Scad.", disabled=True, format="%d"),
@@ -5825,6 +6074,120 @@ elif menu == "⚖️ Migliora Rosa":
                                 col_s2.metric("FM titolare DOPO i cambi", f"{fm_post:.2f}", f"{fm_post - fm_att:+.2f}")
                             except Exception:
                                 st.caption("Simulazione non disponibile.")
+
+
+# ============================================================
+# 🎭 PROFILO GIOCATORI — BONUS vs AFFIDABILITÀ
+# ============================================================
+elif menu == "🎭 Profilo Bonus/Continuità":
+    st.header("🎭 Bonus o Continuità?")
+    st.caption(
+        "Scopri chi ti porta **bonus** (gol, assist, rigori: alti e bassi, \"boom or bust\") "
+        "e chi invece ti dà **voti alti e costanti** (affidabile, punti sicuri ogni giornata)."
+    )
+
+    _db_prof = st.session_state.giocatori_db
+    if _db_prof is None or _db_prof.empty:
+        st.info("Nessun giocatore nel database.")
+    else:
+        _stats_ok = ("stats_per_stagione" in st.session_state and "2026-27" in st.session_state.stats_per_stagione
+                     and st.session_state.stats_per_stagione["2026-27"] is not None
+                     and not st.session_state.stats_per_stagione["2026-27"].empty)
+        if not _stats_ok:
+            st.warning(
+                "⚠️ Non hai ancora caricato le statistiche della stagione 2026-27. "
+                "Il profilo sarà stimato solo dalla FantaMedia. "
+                "Vai in **📈 Statistiche Storiche** per un'analisi più precisa (gol, assist, media voto)."
+            )
+
+        f1, f2 = st.columns([1, 1])
+        with f1:
+            _ruoli_prof = {"Tutti": None, "🧤 Portieri": "P", "🛡️ Difensori": "D",
+                           "⚙️ Centrocampisti": "C", "⚔️ Attaccanti": "A"}
+            _ruolo_prof = st.selectbox("Ruolo", list(_ruoli_prof.keys()), key="prof_ruolo")
+        with f2:
+            _svinc_prof = st.checkbox("Solo svincolati (non in altre rose)", value=False, key="prof_svinc")
+
+        _d = _db_prof.copy()
+        if _ruolo_prof != "Tutti":
+            _d = _d[_d["Ruolo"] == _ruoli_prof[_ruolo_prof]]
+        if _svinc_prof:
+            _occ_prof = get_player_index()
+            _d = _d[~_d["Nome"].apply(lambda n: str(n).lower() in _occ_prof)]
+
+        _righe_prof = []
+        for _, _r in _d.iterrows():
+            _p = profilo_giocatore(str(_r.get("Nome", "")), _r.get("Ruolo"),
+                                  _r.get("FantaMedia"), _r.get("Quotazione"))
+            _righe_prof.append({
+                "Nome": str(_r.get("Nome", "")),
+                "Ruolo": _r.get("Ruolo", "C"),
+                "Squadra": _r.get("Squadra_SerieA", ""),
+                "Tipo": _p["label"],
+                "FM": _p["fantamedia"] if _p["fantamedia"] is not None else round(float(_r.get("FantaMedia", 6.0) or 6.0), 2),
+                "MediaVoto": _p["media_voto"],
+                "Bonus/partita": _p["bonus_score"],
+                "Gol": _p["gol"], "Assist": _p["assist"], "Rigori": _p["rigori"],
+                "Partite": _p["partite"],
+                "Affid.": _p["affidabilita"], "Bonus%": _p["propensione_bonus"],
+                "Quot.": int(_r.get("Quotazione", 0) or 0),
+                "_tipo": _p["tipo"],
+            })
+        _dfp2 = pd.DataFrame(_righe_prof)
+
+        if _dfp2.empty:
+            st.info("Nessun giocatore con questi filtri.")
+        else:
+            _contab = {
+                "bonus": ("🎯 Portatori di bonus", "#ef4444"),
+                "affidabile": ("🧱 Affidabili (voti alti)", "#22c55e"),
+                "equilibrato": ("⚖️ Equilibrati", "#a78bfa"),
+                "sconosciuto": ("❔ Dati insufficienti", "#888888"),
+            }
+            st.markdown("<div class='fm-section-title'>📊 Riepilogo</div>", unsafe_allow_html=True)
+            _cols = st.columns(4)
+            for _i, (_k, (_lbl, _col)) in enumerate(_contab.items()):
+                _n = int((_dfp2["_tipo"] == _k).sum())
+                with _cols[_i]:
+                    st.markdown(
+                        f"<div style='text-align:center;padding:8px;border-radius:10px;"
+                        f"background:rgba(255,255,255,0.04);border-top:3px solid {_col};'>"
+                        f"<div style='font-size:1.6em;font-weight:bold;color:{_col};'>{_n}</div>"
+                        f"<div style='font-size:0.8em;color:#aaa;'>{_lbl}</div></div>",
+                        unsafe_allow_html=True,
+                    )
+
+            st.markdown("<div class='fm-section-title'>🎯 Chi ti porta bonus</div>", unsafe_allow_html=True)
+            st.caption("Gol, assist e rigori: rendono molto quando sono in giornata, ma possono sparire. Ottimi per fare il salto di qualità.")
+            _dfb = _dfp2[_dfp2["_tipo"] == "bonus"].sort_values("Bonus/partita", ascending=False)
+            if _dfb.empty:
+                st.caption("Nessun portatore di bonus rilevato con questi filtri.")
+            else:
+                st.dataframe(
+                    _dfb[["Nome", "Ruolo", "Squadra", "FM", "Gol", "Assist", "Rigori", "Bonus/partita", "Partite", "Quot."]]
+                    .head(15), use_container_width=True, hide_index=True
+                )
+
+            st.markdown("<div class='fm-section-title'>🧱 Chi ti dà continuità</div>", unsafe_allow_html=True)
+            st.caption("Media voto alta e stabile: punti sicuri anche senza bonus. Ideali come zoccolo duro della rosa.")
+            _dfa = _dfp2[_dfp2["_tipo"] == "affidabile"].sort_values("MediaVoto", ascending=False)
+            if _dfa.empty:
+                st.caption("Nessun giocatore \"affidabile\" rilevato con questi filtri.")
+            else:
+                st.dataframe(
+                    _dfa[["Nome", "Ruolo", "Squadra", "FM", "MediaVoto", "Partite", "Affid.", "Quot."]]
+                    .head(15), use_container_width=True, hide_index=True
+                )
+
+            with st.expander("📋 Tabella completa (tutti i giocatori con profilo)", expanded=False):
+                _ord = st.radio("Ordina per", ["Bonus/partita", "MediaVoto", "FM", "Quotazione"],
+                                horizontal=True, key="prof_ord")
+                _forig = {"Bonus/partita": "Bonus/partita", "MediaVoto": "MediaVoto", "FM": "FM", "Quotazione": "Quot."}[_ord]
+                st.dataframe(_dfp2.sort_values(_forig, ascending=False)
+                             [["Nome", "Ruolo", "Squadra", "Tipo", "FM", "MediaVoto", "Bonus/partita",
+                               "Gol", "Assist", "Partite", "Quot."]],
+                             use_container_width=True, hide_index=True)
+                st.caption("🔎 Suggerimento: usa il tasto Cerca in alto a destra nella tabella per filtrare un nome.")
 
 
 # ============================================================
